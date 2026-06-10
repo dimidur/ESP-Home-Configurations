@@ -3,7 +3,7 @@
  * Copyright (c) 2020 Jarno Kyttälä
  * https://github.com/jakkik/DieselHeaterRF
  *
- * Modified by Dmitry Mokretsov (2026):
+ * Modified by Dimitri Duro (2026):
  *   - Added configurable SPI frequency via setFrequency() / _freq2/_freq1/_freq0 members
  *   - Added reinitRadio() public method for runtime CC1101 recovery without SPI reinit
  *   - Added getMarcstate(), readConfigReg(), getFreqRegisters() for health-check and diagnostics

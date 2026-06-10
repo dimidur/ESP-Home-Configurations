@@ -3,7 +3,7 @@
  * Copyright (c) 2020 Jarno Kyttälä
  * https://github.com/jakkik/DieselHeaterRF
  *
- * Modified by Dmitry Mokretsov (2026) — see DieselHeaterRF.h for change log.
+ * Modified by Dimitri Duro (2026) — see DieselHeaterRF.h for change log.
  *
  * ---------------------------------
  *
