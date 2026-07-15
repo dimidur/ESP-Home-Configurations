@@ -32,7 +32,7 @@ ota:
 wifi:
   output_power: 10dBm
   power_save_mode: none
-  fast_connect: true
+  fast_connect: false   # scan on (re)connect so the AP can roam this socket
 
 packages:
   wifi: !include packages/wifi.yaml
