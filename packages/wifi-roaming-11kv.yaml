@@ -1,0 +1,17 @@
+---
+# 802.11k (RRM) + 802.11v (BSS-TM / WNM) client roaming support.
+#
+# HARD REQUIREMENT: ESP32 + esp-idf framework ONLY. These keys are invalid on
+# ESP8266 and on ESP32-arduino builds and will fail to compile there — include
+# this package only from esp-idf ESP32 targets.
+#
+# Enabling either key auto-disables ESPHome's built-in post_connect_roaming,
+# handing roam steering to the APs (802.11v BSS-TM hints + usteer). This pairs
+# with an AP side already running 11k/11v/usteer.
+#
+# NOTE: do NOT add this to devices that must not roam/scan — e.g. diesel-heater,
+# whose CC1101 RF is corrupted by roam-scan channel hopping (it intentionally
+# sets fast_connect: true instead). See docs/future-plans/01-wifi-roaming-80211kvr.md.
+wifi:
+  enable_rrm: true
+  enable_btm: true

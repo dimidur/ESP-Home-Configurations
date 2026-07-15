@@ -1,0 +1,14 @@
+---
+# Disable WiFi modem power-save for always-on MAINS-POWERED devices.
+#
+# Default power_save_mode is LIGHT on ESP32 and NONE on ESP8266. LIGHT lets the
+# radio doze between beacons, which makes a device slow to notice — or outright
+# miss — AP-side steering frames (802.11v BSS-TM hints and usteer's deauth-kick).
+# Setting NONE keeps the radio awake so the AP can actually steer it. Pairs with
+# fast_connect: false (the default) so reconnects scan for the strongest AP.
+#
+# ONLY for mains devices. Do NOT include on battery / deep-sleep devices
+# (e.g. soil-sensor-tuyas, lilygos3-info-screen) — it defeats their power budget.
+# See docs/future-plans/01-wifi-roaming-80211kvr.md.
+wifi:
+  power_save_mode: none

@@ -21,6 +21,7 @@ external_components:
 
 packages:
   wifi: !include packages/wifi.yaml
+  wifi-powersave: !include packages/wifi-powersave-off.yaml
   wifi-signal-sensors: !include packages/wifi-signal-sensors.yaml
   internal-temp-sensor-esp32: !include packages/internal-temp-sensor-esp32.yaml
   factory-reset-button: !include packages/factory-reset-button.yaml

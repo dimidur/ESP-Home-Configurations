@@ -32,6 +32,7 @@ ota:
 
 packages:
   wifi: !include packages/wifi.yaml
+  wifi-powersave: !include packages/wifi-powersave-off.yaml
   wifi-signal-sensors: !include packages/wifi-signal-sensors.yaml
   internaltemp-sensor: !include packages/internal-temp-sensor-esp32.yaml
 

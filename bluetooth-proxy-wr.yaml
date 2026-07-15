@@ -18,4 +18,5 @@ substitutions:
 
 packages:
   bt_proxy: !include packages/device-configs/bluetooth-proxy.yaml
+  wifi-roaming: !include packages/wifi-roaming-11kv.yaml   # ESP32+esp-idf only
   rtttl_buzzer: !include packages/device-configs/rtttl-buzzer.yaml

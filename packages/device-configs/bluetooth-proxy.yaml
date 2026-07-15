@@ -2,12 +2,12 @@
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
-  min_version: 2025.9.0
+  min_version: 2026.5.1
   name_add_mac_suffix: true
   project:
     name: esphome.bluetooth-proxy
     # https://github.com/esphome/bluetooth-proxies/releases
-    version: "25.12.4"
+    version: "26.5.1"
 
 esp32:
   board: ${board}
