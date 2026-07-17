@@ -1,10 +1,9 @@
 # Plan 02 — ESPHome fleet update + IoT-VLAN firewall allowlist
 
-**Status:** 🔶 **Device upgrade COMPLETE (2026-07-18)** — all active devices flashed on ESPHome
-2026.x; per-device fixes done (delta filter, mmwave occupancy, captive_portal, dns1, chip floors,
-rtttl, mipi_spi, qrcode) — see §A.4. **REMAINING (user-side, router):** apply the IoT firewall
-egress allowlist (§B.5) and resolve the meraner-2 Cloudflare round-robin 443 rule (§B.6). Kept
-active until the firewall side is closed.
+**Status:** ✅ **COMPLETED 2026-07-18** — all active devices upgraded & flashed on ESPHome 2026.x
+with per-device fixes (delta filter, mmwave occupancy, captive_portal, dns1, chip floors, rtttl,
+mipi_spi, qrcode) — see §A.4. Router side closed too: IoT firewall egress allowlist (§B.5) applied
+and the meraner-2 Cloudflare round-robin 443 rule (§B.6) resolved.
 **Execution order:** **2nd** (after Plan 01 roaming) — bump fleet to latest ESPHome; fix the
 BT-proxy egress error surfaced by the last flash
 **Scope:** all 21 device configs + `packages/`; the IoT VLAN firewall (router)
