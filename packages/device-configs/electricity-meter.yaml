@@ -933,7 +933,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
   # Voltage sensors
   - platform: template
     name: "Voltage L1"
@@ -946,7 +946,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   - platform: template
     name: "Voltage L2"
     id: voltage_l2
@@ -958,7 +958,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   - platform: template
     name: "Voltage L3"
     id: voltage_l3
@@ -970,7 +970,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Current sensors
   - platform: template
     name: "Current L1"
@@ -983,7 +983,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.01
+          - delta: 0.005
   - platform: template
     name: "Current L2"
     id: current_l2
@@ -995,7 +995,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.01
+          - delta: 0.005
   - platform: template
     name: "Current L3"
     id: current_l3
@@ -1007,7 +1007,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.01
+          - delta: 0.005
   # Frequency sensor
   - platform: template
     name: "Frequency"
@@ -1020,7 +1020,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Phase angle sensors
   - platform: template
     name: "Phase Angle UL2:UL1"
@@ -1033,7 +1033,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1.0
+          - delta: 0.5
   - platform: template
     name: "Phase Angle UL3:UL1"
     id: phase_angle_ul3_ul1
@@ -1045,7 +1045,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1.0
+          - delta: 0.5
   - platform: template
     name: "Phase Angle IL1:UL1"
     id: phase_angle_il1_ul1
@@ -1057,7 +1057,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1.0
+          - delta: 0.5
   - platform: template
     name: "Phase Angle IL2:UL2"
     id: phase_angle_il2_ul2
@@ -1069,7 +1069,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1.0
+          - delta: 0.5
   - platform: template
     name: "Phase Angle IL3:UL3"
     id: phase_angle_il3_ul3
@@ -1081,7 +1081,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1.0
+          - delta: 0.5
   # Communication quality sensor
   - platform: template
     name: "OBIS Valid Frame Rate"
@@ -1143,7 +1143,7 @@ sensor:
     filters:
       - or:
           - throttle: 2min
-          - delta: 1.0
+          - delta: 0.5
   # Positioning mode raw sensors — no validation, no throttle, only active
   # when positioning_mode switch is on (cleared to unavailable on turn-off)
   - platform: template

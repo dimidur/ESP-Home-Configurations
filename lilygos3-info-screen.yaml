@@ -150,6 +150,12 @@ esp32:
   framework:
     type: arduino
   flash_size: 16MB
+
+# psram is auto-loaded (empty) by the display component; newer ESPHome requires
+# an explicit mode on ESP32-S3. T-Display-S3 = ESP32-S3R8 -> 8MB octal (OPI).
+psram:
+  mode: octal
+  speed: 80MHz
 #     build_unflags: -Werror=all
 #     board_build.flash_mode: dio
 
@@ -1507,7 +1513,7 @@ sensor:
     #  update_interval: 60s
     filters:
       - lambda: return ceil(x / 25.0);
-      - delta: 1
+      - delta: 0.5
   # Temperature sensor
   - platform: homeassistant
     id: room_temperature
@@ -1517,7 +1523,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Humidity sensor
   - platform: homeassistant
     id: room_humidity
@@ -1527,7 +1533,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
   # Hausmull next collection sensor
   - platform: homeassistant
     id: hausmull
@@ -1542,7 +1548,7 @@ sensor:
     filters:
       - or:
           - throttle: 600min
-          - delta: 1
+          - delta: 0.5
   # Biomull next collection sensor
   - platform: homeassistant
     id: biomull
@@ -1557,7 +1563,7 @@ sensor:
     filters:
       - or:
           - throttle: 600min
-          - delta: 1
+          - delta: 0.5
   # Papier next collection sensor
   - platform: homeassistant
     id: papier
@@ -1572,7 +1578,7 @@ sensor:
     filters:
       - or:
           - throttle: 600min
-          - delta: 1
+          - delta: 0.5
   # Gelbe Tonne next collection sensor
   - platform: homeassistant
     id: gelbe_tonne
@@ -1587,7 +1593,7 @@ sensor:
     filters:
       - or:
           - throttle: 600min
-          - delta: 1
+          - delta: 0.5
   # Pir occupancy last changed seconds sensor
   # This sensor is used to determine if device should go to sleep when no one is in the room
   - platform: homeassistant
@@ -1602,7 +1608,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 20
+          - delta: 19
   # Outdoor temperature sensor
   - platform: homeassistant
     id: outdoor_temperature
@@ -1612,7 +1618,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Wind beaufort sensor from Home Assistant
   - platform: homeassistant
     id: wind_beaufort
@@ -1630,7 +1636,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
   # Wakeup cause sensor
   - platform: template
     name: "Wakeup Cause"
@@ -1641,7 +1647,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
     # Next wake up time (approximate)
   - platform: template
     name: "Next Wake Up Time"
@@ -1667,7 +1673,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Rain rate sensor from Home Assistant
   - platform: homeassistant
     id: rain_rate
@@ -1680,7 +1686,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 0.1
+          - delta: 0.05
   # Lightning strike distance sensor from Home Assistant
   - platform: homeassistant
     id: lightning_strike_distance
@@ -1697,7 +1703,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
 
 switch:
   # Backlight switch

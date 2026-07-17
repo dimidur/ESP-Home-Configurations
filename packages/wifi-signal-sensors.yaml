@@ -9,7 +9,7 @@ sensor:
     filters:
       - or:
           - throttle: 5min
-          - delta: 1
+          - delta: 0.5
     disabled_by_default: true
   # WiFi signal strength/RSSI sensor (percentage)
   - platform: copy

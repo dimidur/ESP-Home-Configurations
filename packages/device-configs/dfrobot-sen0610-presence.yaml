@@ -44,7 +44,9 @@ sensor:
     filters:
       - or:
         - throttle: 5min
-        - delta: 1
+        # ESPHome's delta filter is strict '>', so delta:1 would drop the 0->1
+        # presence transition (exactly 1). 0.5 lets any >=1 change through.
+        - delta: 0.5
 
 switch:
   - platform: template

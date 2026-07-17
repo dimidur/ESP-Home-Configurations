@@ -23,6 +23,10 @@ output:
     frequency: 1000 Hz
     pin: ${buzzer_pin}
     id: buzzer_output
+    # Required so codegen keeps float power-scaling: the rtttl_play script
+    # sets volume at runtime via set_max_power(), which static_asserts at
+    # build time unless some output declares max_power in YAML.
+    max_power: 100%
 
 rtttl:
   id: buzzer_rtttl

@@ -238,17 +238,23 @@ color:
 psram:
 
 display:
-  - platform: ili9xxx
+  # Migrated ili9xxx -> mipi_spi (ili9xxx deprecated); built-in ILI9341 model.
+  # REVERT: uncomment the ili9xxx + color_palette lines, comment the mipi_spi
+  # + color_depth lines. Flash and VISUALLY verify colors + orientation first.
+  # - platform: ili9xxx           # OLD working fallback
+  - platform: mipi_spi
     model: ILI9341
     cs_pin: GPIO03
     dc_pin: GPIO04
     reset_pin: GPIO06
-    # data_rate: 10MHz
+    # data_rate: 10MHz            # both default to 10MHz
     transform:
-      # mirror_x: true
+      swap_xy: false
+      mirror_x: false             # model default is mirror_x=true; override
       mirror_y: true
     # show_test_card: true
-    color_palette: 8BIT
+    # color_palette: 8BIT         # OLD: ili9xxx indexed 256-color palette
+    color_depth: 16               # mipi_spi RGB565; buffer lives in PSRAM
     # CHANGE THIS if your screen has colors mapped wrong
     color_order: bgr
     invert_colors: false
@@ -403,7 +409,7 @@ display:
       // PREPARE VARIABLES
       auto title = "";
       auto unit = "";
-      char *names[3];
+      const char *names[3];  // read-only literals (fixes -Wwrite-strings)
       float values[3];
       esphome::Color colors[3];
       int count = 0;
@@ -720,7 +726,7 @@ sensor:
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     temperature:
       name: "SCD40 Temperature"
       id: temp_scd40
@@ -763,11 +769,11 @@ sensor:
     i2c_id: i2c_2
     variant: AHT20
     temperature:
-      name: "AHT20/ENS160 Temperature"
+      name: "AHT20+ENS160 Temperature"
       id: temp_aht20_ens
       disabled_by_default: true
     humidity:
-      name: "AHT20/ENS160 Humidity"
+      name: "AHT20+ENS160 Humidity"
       id: hum_aht20_ens
       disabled_by_default: true
     update_interval: 10s
@@ -785,7 +791,7 @@ sensor:
             alpha: 0.2
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     tvoc:
       name: "SGP30 TVOC"
       id: tvoc_sgp30
@@ -796,7 +802,7 @@ sensor:
             alpha: 0.2
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     store_baseline: true
     update_interval: 5s
     compensation:
@@ -816,7 +822,7 @@ sensor:
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     nox:
       name: "SGP41 NOx Index"
       id: aqi_nox_sgp41
@@ -827,7 +833,7 @@ sensor:
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     compensation:
       humidity_source: hum_aht20
       temperature_source: temp_aht20
@@ -844,21 +850,21 @@ sensor:
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     pm_2_5:
       name: "PMS Particulate Matter <2.5µm Concentration"
       id: pm25_pms
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
     pm_10_0:
       name: "PMS Particulate Matter <10.0µm Concentration"
       id: pm10_pms
       filters:
         - or:
             - throttle: 5min
-            - delta: 1
+            - delta: 0.5
 text_sensor:
   - platform: template
     lambda: |-

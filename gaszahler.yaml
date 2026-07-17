@@ -90,7 +90,7 @@ sensor:
     filters:
       or:
         - throttle: 5min
-        - delta: 0.01
+        - delta: 0.005
   - platform: template
     name: "Gesamtimpulse"
     state_class: "total_increasing"
@@ -101,7 +101,7 @@ sensor:
     filters:
       or:
         - throttle: 5min
-        - delta: 1
+        - delta: 0.5
 switch:
   - platform: restart
     name: "Gaszähler neu starten"

@@ -7,6 +7,13 @@ wifi:
     static_ip: ${device_static_ip}
     gateway: ${wifi_manual_ip_gateway}
     subnet: ${wifi_manual_ip_subnet}
+    # manual_ip bypasses DHCP, so no DNS is advertised; resolve via gateway.
+    # Firewall must allow UDP 53 to it. Overridable per-device if needed.
+    dns1: ${wifi_manual_ip_gateway}
   ap:
     ssid: ${device_ap_ssid}
     password: ${device_ap_password}
+
+# Config page for the fallback AP above; else ESPHome warns the AP is unusable.
+# Inert unless the AP activates (station WiFi unreachable).
+captive_portal:
