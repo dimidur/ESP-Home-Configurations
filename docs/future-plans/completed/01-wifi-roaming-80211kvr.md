@@ -1,6 +1,9 @@
 # Plan 01 — Enable 802.11k/v (and prepare for 11r) roaming on ESPHome devices
 
-**Status:** planning only — no code yet
+**Status:** ✅ **COMPLETED 2026-07-15** — implemented, validated, flashed, pushed.
+`packages/wifi-roaming-11kv.yaml` (enable_rrm/btm) on the 6 BT proxies; `wifi-powersave-off.yaml`
+on the mains ESP32-arduino devices; diesel-heater (CC1101) and single-AP sockets deliberately
+excluded. Commits `16ff65d` (roaming+powersave) and `f7d5790` (socket fast_connect revert).
 **Execution order:** **1st** (cheapest change, immediate benefit) — then Plan 02 → 03 → 04 → 05
 **Scope:** `packages/wifi.yaml` + per-device `wifi:` on eligible ESP32 devices
 **Owner:** Dimitri
