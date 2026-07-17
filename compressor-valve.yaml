@@ -32,7 +32,10 @@ ota:
 wifi:
   output_power: 10dBm
   power_save_mode: none
-  fast_connect: false   # scan on (re)connect so the AP can roam this socket
+  # Only one AP in reach (garage attic router), so there's nothing to roam to.
+  # Skip the scan and connect straight to it -- also avoids scan RF churn
+  # between these two adjacent, mutually-interfering sockets.
+  fast_connect: true
 
 packages:
   wifi: !include packages/wifi.yaml

@@ -44,6 +44,11 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
+    # PER-DEVICE chip floor (boot log showed rev >= 3.0, suggested 3.1): drops
+    # old-silicon workarounds from the binary. NEVER move to a shared package --
+    # firmware with a chip floor boot-loops on older-revision boards.
+    advanced:
+      minimum_chip_revision: "3.1"
 
 logger:
   level: DEBUG
