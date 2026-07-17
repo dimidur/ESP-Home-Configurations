@@ -418,6 +418,13 @@ light:
           name: "Fast Pulse"
           transition_length: 300ms
           update_interval: 300ms
+      # Rapid pulse for the led_error script (keeps the red color it sets;
+      # a strobe effect would override that color). Was referenced but never
+      # defined -> hard error in current ESPHome.
+      - pulse:
+          name: "Error Blink"
+          transition_length: 100ms
+          update_interval: 150ms
 
 # LED Control Scripts - Comprehensive Status Indication System
 script:

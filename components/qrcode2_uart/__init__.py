@@ -103,7 +103,7 @@ async def to_code(config):
 # Start scan action
 @automation.register_action('qrcode2_uart.start_scan', StartScanAction, cv.Schema({
     cv.GenerateID(): cv.use_id(QRCode2UARTComponent),
-}))
+}), synchronous=True)  # play() calls start_scan() inline and returns; no deferral
 async def qrcode2_uart_start_scan_to_code(config, action_id, template_args, args):
     parent = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_args, parent)
@@ -111,7 +111,7 @@ async def qrcode2_uart_start_scan_to_code(config, action_id, template_args, args
 # Stop scan action
 @automation.register_action('qrcode2_uart.stop_scan', StopScanAction, cv.Schema({
     cv.GenerateID(): cv.use_id(QRCode2UARTComponent),
-}))
+}), synchronous=True)  # play() calls stop_scan() inline and returns; no deferral
 async def qrcode2_uart_stop_scan_to_code(config, action_id, template_args, args):
     parent = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_args, parent)
@@ -131,7 +131,7 @@ async def qrcode2_uart_stop_scan_to_code(config, action_id, template_args, args)
 
 @automation.register_action('qrcode2_uart.reset_scanner', ResetScannerAction, cv.Schema({
     cv.GenerateID(): cv.use_id(QRCode2UARTComponent),
-}))
+}), synchronous=True)  # play() resets inline and returns; no deferral
 async def qrcode2_uart_reset_scanner_to_code(config, action_id, template_args, args):
     parent = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_args, parent)
@@ -139,7 +139,7 @@ async def qrcode2_uart_reset_scanner_to_code(config, action_id, template_args, a
 @automation.register_action('qrcode2_uart.update_long_press_duration', UpdateLongPressDurationAction, cv.Schema({
     cv.GenerateID(): cv.use_id(QRCode2UARTComponent),
     cv.Required('duration_ms'): cv.templatable(cv.uint32_t),
-}))
+}), synchronous=True)  # play() sets duration inline and returns; no deferral
 async def qrcode2_uart_update_long_press_duration_to_code(config, action_id, template_args, args):
     parent = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_args, parent)

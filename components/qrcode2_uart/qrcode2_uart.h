@@ -127,7 +127,7 @@ template<typename... Ts> class StartScanAction : public Action<Ts...> {
  public:
   StartScanAction(QRCode2UARTComponent *parent) : parent_(parent) {}
   
-  void play(Ts... x) override { this->parent_->start_scan(); }
+  void play(const Ts &...x) override { this->parent_->start_scan(); }
   
  protected:
   QRCode2UARTComponent *parent_;
@@ -137,7 +137,7 @@ template<typename... Ts> class StopScanAction : public Action<Ts...> {
  public:
   StopScanAction(QRCode2UARTComponent *parent) : parent_(parent) {}
   
-  void play(Ts... x) override { this->parent_->stop_scan(); }
+  void play(const Ts &...x) override { this->parent_->stop_scan(); }
   
  protected:
   QRCode2UARTComponent *parent_;
@@ -153,7 +153,7 @@ template<typename... Ts> class StopScanAction : public Action<Ts...> {
 //  public:
 //   GetDeviceInfoAction(QRCode2UARTComponent *parent) : parent_(parent) {}
 //   
-//   void play(Ts... x) override { 
+//   void play(const Ts &...x) override {  // ESPHome 2026.x: Action::play takes const-ref args 
 //     this->parent_->get_device_info();
 //   }
 //   
@@ -165,7 +165,7 @@ template<typename... Ts> class ResetScannerAction : public Action<Ts...> {
  public:
   ResetScannerAction(QRCode2UARTComponent *parent) : parent_(parent) {}
   
-  void play(Ts... x) override { 
+  void play(const Ts &...x) override {  // ESPHome 2026.x: Action::play takes const-ref args 
     this->parent_->reset_scanner(); 
   }
   
@@ -178,7 +178,7 @@ template<typename... Ts> class UpdateLongPressDurationAction : public Action<Ts.
   UpdateLongPressDurationAction(QRCode2UARTComponent *parent) : parent_(parent) {}
   TEMPLATABLE_VALUE(uint32_t, duration_ms)
   
-  void play(Ts... x) override { 
+  void play(const Ts &...x) override {  // ESPHome 2026.x: Action::play takes const-ref args 
     uint32_t duration = this->duration_ms_.value(x...);
     this->parent_->update_long_press_duration(duration); 
   }
