@@ -120,7 +120,9 @@ esphome:
   min_version: 2025.7.0
   platformio_options:
     board_build.f_flash: 80000000L
-    board_build.partitions: default_16MB.csv
+    # board_build.partitions removed: ESPHome 2026.x builds arduino on esp-idf
+    # and auto-generates the partition table from esp32.flash_size (16MB); the
+    # old pure-arduino 'default_16MB.csv' override no longer resolves.
     board_build.arduino.memory_type: qio_opi
   on_boot:
     # priority has been determined by trial and error
