@@ -90,6 +90,44 @@ everything else is arduino. (This matters for Plan 01 — roaming needs esp-idf.
 **Overall:** low-risk. Recommended approach — bump the whole fleet to a single current ESPHome
 release, rebuild each, fix warnings #1/#4 opportunistically, and re-flash. No hard breakers.
 
+### A.4 Stage-2 execution log & queued per-device fixes
+
+Done so far (2026-07-15..17): 6 proxies upgraded/flashed — roaming 11k/v live, mmwave
+`delta: 0.5` occupancy fix verified, `captive_portal:` + `dns1:` in wifi.yaml, kitchen got a
+per-device `minimum_chip_revision: "3.1"` (NEVER move to shared package — boot-loops older
+chips), wr needed `max_power: 100%` on the rtttl `buzzer_output` (new codegen static_assert;
+compile-verified). Fleet-wide delta sweep (39 sites) + lilygo `psram: mode: octal` applied,
+config-validated, not yet flashed. Known net issue: `firmware.esphome.io` is Cloudflare
+round-robin (104.21.87.21 / 172.67.168.170) — destination-pinned 443 rules fail randomly
+(meraner-2); use source-IP+port rules or a dnsmasq nftset/FQDN rule.
+
+**QUEUED — air-quality-sensor-1 (planned 2026-07-17, execute next session):**
+
+1. **Rename `/`-names (hard error in ESPHome 2026.7.0 — must land before any 2026.7 bump).**
+   `air-quality-sensor-1.yaml:766` + `:770`:
+   `AHT20/ENS160 Temperature|Humidity` → `AHT20+ENS160 Temperature|Humidity`.
+   `+` slugifies to the same object_id as `/` (`aht20_ens160_*`) → no entity churn; both are
+   `disabled_by_default: true` diagnostics with no active HA entity (verified) → zero history
+   risk. Repo-wide grep confirms these 2 lines are the ONLY `/`-in-name occurrences.
+2. **`char *names[3]` → `const char *names[3]` (line 406).** Clears all 9 `-Wwrite-strings`
+   warnings (literal assignments at 418-420 / 460-462 / 505-507; array is read-only after).
+3. **`ili9xxx` → `mipi_spi` migration — DEFERRED (reassessed 2026-07-17).**
+   `mipi_spi` `model:` values are whole *devices* (T_EMBED, M5CORE2, M5STACK…), not bare
+   controllers. The ILI9341 driver exists inside mipi_spi (2025.12 M5CORE2 "extends the ILI9341
+   driver") but there's no drop-in `model: ILI9341` for a generic panel — it needs
+   `model: CUSTOM` + an explicit init sequence + dimensions, then color_depth/color_order/
+   invert/transform mapping and **on-panel visual verification** (colors + orientation).
+   That's a real port with display-breakage risk, on a device where the panel is secondary.
+   It's **deprecation-only** (ili9xxx works through 2026.5/2026.6, no announced removal), so
+   **defer** until a generic ILI9341 mipi_spi model lands OR there's appetite to build+verify a
+   CUSTOM config at the panel. Only this device uses ili9xxx. Current block: lines 241-254
+   (ILI9341, cs GPIO03 / dc GPIO04 / reset GPIO06, `transform.mirror_y`, `color_palette: 8BIT`,
+   `color_order: bgr`, `invert_colors: false`).
+
+**DONE + compile-verified 2026-07-17:** #1 (`const char *names[3]` → 9 write-strings warnings
+cleared) and #2 (`/`-names → `AHT20+ENS160 …`, object_ids unchanged, no active HA entity, no
+2026.7.0 hard error). #3 deferred. air-quality-sensor-1 compiles clean; safe to flash.
+
 ---
 
 ## SECTION B — IoT-VLAN firewall allowlist
