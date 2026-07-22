@@ -112,7 +112,9 @@ substitutions:
   wind_beaufort_sensor_id: sensor.wind_beaufort_recent_max
   rain_index_sensor_id: sensor.gw1100a_rain_index_3_recent_max
   rain_rate_sensor_id: sensor.gw1100a_rain_rate
-  lighting_strike_distance_sensor_id: sensor.lighting_strike_distance_recent_min
+  lighting_strike_distance_sensor_id: sensor.gw1100a_lightning_strike_distance
+  lightning_last_strike_sensor_id: sensor.gw1100a_last_lightning_strike
+  lightning_recency_window_s: "3600"  # alert only if last strike within N seconds
 
 esphome:
   name: lilygos3-info-screen
@@ -915,7 +917,8 @@ display:
           last_position = get_alarm_icon_position(alarm_num);
           last_alarm_num = alarm_num;
         }
-        if (id(lightning_strike_distance).has_state() && !isnan(id(lightning_strike_distance).state) && id(lightning_strike_distance).state < 18) {
+        // recency gated by lightning_strike_recent (GW1100 latches distance)
+        if (id(lightning_strike_recent).state && id(lightning_strike_distance).has_state() && !isnan(id(lightning_strike_distance).state) && id(lightning_strike_distance).state < 18) {
           float val = id(lightning_strike_distance).state;
           if (val != last_val) {
             float t = val / 18.0f;
@@ -1204,6 +1207,28 @@ binary_sensor:
     icon: mdi:television
     lambda: return id(backlight).state || id(is_charging).state;
     entity_category: diagnostic
+  # Lightning alert freshness gate: true while the last strike is within the
+  # window. Parsed here, not in the render loop; dedupes like the other alerts.
+  - platform: template
+    id: lightning_strike_recent
+    internal: true
+    lambda: |-
+      if (!id(ha_last_lightning_strike).has_state() || !id(ha_time).now().is_valid())
+        return false;
+      int Y, Mo, D, H, Mi, S;  // HA format: 2026-07-19T14:59:02+00:00 (UTC)
+      if (sscanf(id(ha_last_lightning_strike).state.c_str(), "%d-%d-%dT%d:%d:%d", &Y, &Mo, &D, &H, &Mi, &S) != 6)
+        return false;
+      ESPTime strike{};
+      strike.year = Y; strike.month = Mo; strike.day_of_month = D;
+      strike.hour = H; strike.minute = Mi; strike.second = S;
+      strike.recalc_timestamp_utc(false);  // fill .timestamp (UTC epoch)
+      time_t now = id(ha_time).now().timestamp;
+      return strike.timestamp > 0 && now >= strike.timestamp &&
+             (now - strike.timestamp) < ${lightning_recency_window_s};
+    on_state:
+      then:
+        - lambda: |-
+            id(screen_is_out_of_sync) = true;
 text_sensor:
   # Current time sensor (to be displayed on screen)
   - platform: deduplicate_text
@@ -1231,6 +1256,9 @@ text_sensor:
   - platform: deduplicate_text
     id: voc_level
     internal: true
+    # ESPHome 2026.x PollingComponent default is SCHEDULER_DONT_RUN (never);
+    # without update_interval it never polls -> never publishes -> renders gray.
+    update_interval: 10s
     on_value:
       then:
         - lambda: |-
@@ -1244,6 +1272,7 @@ text_sensor:
   - platform: deduplicate_text
     id: co2_level
     internal: true
+    update_interval: 10s  # see voc_level: required on ESPHome 2026.x
     on_value:
       then:
         - lambda: |-
@@ -1257,6 +1286,7 @@ text_sensor:
   - platform: deduplicate_text
     id: ppm_level
     internal: true
+    update_interval: 10s  # see voc_level: required on ESPHome 2026.x
     on_value:
       then:
         - lambda: |-
@@ -1270,6 +1300,7 @@ text_sensor:
   - platform: deduplicate_text
     id: person_state
     internal: true
+    update_interval: 10s  # see voc_level: required on ESPHome 2026.x
     lambda: |-
       if (id(ha_person_state).has_state()) {
         return id(ha_person_state).state;
@@ -1292,6 +1323,15 @@ text_sensor:
     id: ha_person_state
     entity_id: ${person_sensor_id}
     internal: true
+  # Last lightning strike time (ISO8601, UTC) — freshness gate for the alert
+  - platform: homeassistant
+    id: ha_last_lightning_strike
+    entity_id: ${lightning_last_strike_sensor_id}
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            id(screen_is_out_of_sync) = true;
 
 sensor:
   - platform: uptime
