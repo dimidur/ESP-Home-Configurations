@@ -120,12 +120,8 @@ esphome:
   name: lilygos3-info-screen
   friendly_name: lilygos3-info-screen
   min_version: 2025.7.0
-  platformio_options:
-    board_build.f_flash: 80000000L
-    # board_build.partitions removed: ESPHome 2026.x builds arduino on esp-idf
-    # and auto-generates the partition table from esp32.flash_size (16MB); the
-    # old pure-arduino 'default_16MB.csv' override no longer resolves.
-    board_build.arduino.memory_type: qio_opi
+  # esp-idf sets flash freq (80MHz) + partition table automatically; OPI PSRAM
+  # is configured via the psram component below.
   on_boot:
     # priority has been determined by trial and error
     # it should be lower than gpio components and higher than interval components
@@ -142,8 +138,6 @@ esphome:
         - script.execute: check_deep_sleep_conditions
 
 external_components:
-  - source: github://landonr/lilygo-tdisplays3-esphome
-    components: [tdisplays3]
   - source:
       type: local
       path: components
@@ -152,7 +146,7 @@ esp32:
   board: esp32-s3-devkitc-1
   variant: esp32s3
   framework:
-    type: arduino
+    type: esp-idf
   flash_size: 16MB
 
 # psram is auto-loaded (empty) by the display component; newer ESPHome requires
@@ -350,11 +344,29 @@ color:
   - id: color_cream
     hex: FFFFCC
 
+# Octal (8-bit parallel) LCD bus for the T-Display-S3 ST7789. Pins from the
+# tdisplays3 build flags: WR/clk=8, D0-D7=39,40,41,42,45,46,47,48.
+spi:
+  - id: lcd_spi
+    type: octal
+    interface: hardware
+    clk_pin: 8
+    data_pins: [39, 40, 41, 42, 45, 46, 47, 48]
+
 display:
-  - platform: tdisplays3
+  # Native mipi_spi replaces tdisplays3/TFT_eSPI (removes the arduino framework).
+  # Control pins (dc=7 cs=6 reset=5 enable=9,15), BGR order and color invert come
+  # from the T-DISPLAY-S3 model preset.
+  # VERIFY ON HARDWARE: orientation (rotation) and colors (color_order/invert).
+  - platform: mipi_spi
+    model: T-DISPLAY-S3
+    spi_id: lcd_spi
     id: disp
-    # Update interval is never to ensure the display is only updated when required
-    # Update performed by interval components
+    # Override model default enable_pin [9,15] -> [9] (RD held high). GPIO15 is
+    # LCD_POWER_ON, kept under the existing `backlight` switch for deep-sleep
+    # power cutting. VERIFY: display init needs GPIO15 on before setup.
+    enable_pin: [9]
+    # Only updated when required; driven by the interval components.
     update_interval: never
     rotation: 270
     lambda: |-
@@ -946,18 +958,128 @@ display:
         return false;
       };
 
-      auto render_alarms = [&render_heat_alarm, &render_wind_alert, &render_rain_alarm](display::Display &it) {
-        // List of alarm lambdas to call in order
+      // --- Grocy per-chore alerts. Active when the chore id appears in the
+      //     overdue CSV (sensor.grocy_overdue_chore_ids, e.g. "1,4,6"); matched
+      //     as ",<id>," so 1 never matches 10/11. alarm_num < 0 = active but no
+      //     free slot (caller draws the overflow marker instead of this icon).
+      auto render_chore_descale = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = false;
+        if (id(grocy_overdue_chore_ids).has_state()) {
+          std::string csv = "," + id(grocy_overdue_chore_ids).state + ",";
+          active = csv.find(",1,") != std::string::npos;
+        }
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(chore_descale_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_chore_dishwasher = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = false;
+        if (id(grocy_overdue_chore_ids).has_state()) {
+          std::string csv = "," + id(grocy_overdue_chore_ids).state + ",";
+          active = csv.find(",2,") != std::string::npos;
+        }
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(chore_dishwasher_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_chore_washer = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = false;
+        if (id(grocy_overdue_chore_ids).has_state()) {
+          std::string csv = "," + id(grocy_overdue_chore_ids).state + ",";
+          active = csv.find(",3,") != std::string::npos;
+        }
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(chore_washer_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_chore_clo = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = false;
+        if (id(grocy_overdue_chore_ids).has_state()) {
+          std::string csv = "," + id(grocy_overdue_chore_ids).state + ",";
+          active = csv.find(",4,") != std::string::npos;
+        }
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(chore_clo_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_chore_plantwater = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = false;
+        if (id(grocy_overdue_chore_ids).has_state()) {
+          std::string csv = "," + id(grocy_overdue_chore_ids).state + ",";
+          active = csv.find(",6,") != std::string::npos;
+        }
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(chore_plantwater_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      // --- Soil-moisture alerts: active below threshold (%). ---
+      auto render_soil_thuja = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = id(thuja_front_soil).has_state() && id(thuja_front_soil).state < 70;
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(soil_thuja_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_soil_blue_pot = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+        bool active = id(blue_pot_soil).has_state() && id(blue_pot_soil).state < 70;
+        if (active && alarm_num >= 0) {
+          auto pos = get_alarm_icon_position(alarm_num);
+          it.image(pos.first, pos.second, id(soil_blue_pot_icon), id(color_yellow), COLOR_OFF);
+        }
+        return active;
+      };
+
+      auto render_alarms = [&render_heat_alarm, &render_wind_alert, &render_rain_alarm,
+                            &render_chore_descale, &render_chore_dishwasher, &render_chore_washer,
+                            &render_chore_clo, &render_chore_plantwater,
+                            &render_soil_thuja, &render_soil_blue_pot](display::Display &it) {
+        // Weather alerts first (fixed priority), then chores, then soil. Active
+        // alerts pack left-to-right; inactive ones cost no slot.
         std::vector<std::function<bool(display::Display&, int)>> alarm_renderers = {
           render_heat_alarm,
           render_wind_alert,
-          render_rain_alarm
+          render_rain_alarm,
+          render_chore_descale,
+          render_chore_dishwasher,
+          render_chore_washer,
+          render_chore_clo,
+          render_chore_plantwater,
+          render_soil_thuja,
+          render_soil_blue_pot
         };
+        const int MAX_SLOTS = 8;  // 4 x 2 grid
         int alarm_num = 0;
+        bool overflow = false;
         for (auto &render_alarm : alarm_renderers) {
-          if (render_alarm(it, alarm_num)) {
+          int slot = (alarm_num < MAX_SLOTS) ? alarm_num : -1;  // -1 = active but no slot
+          if (render_alarm(it, slot)) {
+            if (slot < 0) overflow = true;
             alarm_num++;
           }
+        }
+        if (overflow) {
+          // Small yellow triangle at the bottom-right of the grid = "more active
+          // alerts than fit". Pagination/animation is a later enhancement.
+          int tx = it.get_width() - 2;
+          int ty = 40 + 48 + 40;  // start_y + row spacing + icon size (bottom of row 2)
+          it.filled_triangle(tx - 12, ty, tx, ty, tx, ty - 12, id(color_yellow));
         }
       };
 
@@ -1021,112 +1143,178 @@ display:
       render_main_content(it);
 
 image:
-  - file: mdi:thermometer
+  - platform: file
+    file: mdi:thermometer
     id: temp_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:water-percent
+  - platform: file
+    file: mdi:water-percent
     id: hum_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:molecule-co2
+  - platform: file
+    file: mdi:molecule-co2
     id: co2_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:molecule
+  # --- Grocy per-chore alert icons (40x40) ---
+  - platform: file
+    file: mdi:kettle
+    id: chore_descale_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:dishwasher
+    id: chore_dishwasher_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:washing-machine
+    id: chore_washer_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:toilet
+    id: chore_clo_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:watering-can
+    id: chore_plantwater_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  # --- Soil-moisture alert icons (40x40) ---
+  - platform: file
+    file: mdi:pine-tree
+    id: soil_thuja_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:tree
+    id: soil_blue_pot_icon
+    type: grayscale
+    transparency: alpha_channel
+    resize: 40x40
+  - platform: file
+    file: mdi:molecule
     id: voc_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:chemical-weapon
+  - platform: file
+    file: mdi:chemical-weapon
     id: ppm_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:leaf
+  - platform: file
+    file: mdi:leaf
     id: energy_saving_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:home-assistant
+  - platform: file
+    file: mdi:home-assistant
     id: ha_api_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:run
+  - platform: file
+    file: mdi:run
     id: run_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:walk
+  - platform: file
+    file: mdi:walk
     id: walk_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:human-cane
+  - platform: file
+    file: mdi:human-cane
     id: human_cane_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:human-walker
+  - platform: file
+    file: mdi:human-walker
     id: human_walker_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-alert-outline
+  - platform: file
+    file: mdi:wifi-strength-alert-outline
     id: wifi_strength_alert_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-outline
+  - platform: file
+    file: mdi:wifi-strength-outline
     id: wifi_strength_outline_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-4
+  - platform: file
+    file: mdi:wifi-strength-4
     id: wifi_strength_4_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-3
+  - platform: file
+    file: mdi:wifi-strength-3
     id: wifi_strength_3_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-2
+  - platform: file
+    file: mdi:wifi-strength-2
     id: wifi_strength_2_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:wifi-strength-1
+  - platform: file
+    file: mdi:wifi-strength-1
     id: wifi_strength_1_icon
     type: grayscale
     transparency: alpha_channel
     resize: 22x22
-  - file: mdi:sun-thermometer
+  - platform: file
+    file: mdi:sun-thermometer
     id: sun_thermometer_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:snowflake-alert
+  - platform: file
+    file: mdi:snowflake-alert
     id: snowflake_alert_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:weather-windy
+  - platform: file
+    file: mdi:weather-windy
     id: wind_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:weather-pouring
+  - platform: file
+    file: mdi:weather-pouring
     id: weather_pouring_icon
     type: grayscale
     transparency: alpha_channel
     resize: 40x40
-  - file: mdi:weather-lightning-rainy
+  - platform: file
+    file: mdi:weather-lightning-rainy
     id: weather_lightning_rainy_icon
     type: grayscale
     transparency: alpha_channel
@@ -1333,6 +1521,17 @@ text_sensor:
         - lambda: |-
             id(screen_is_out_of_sync) = true;
 
+  # Grocy overdue chore ids as a compact CSV, e.g. "1,4,6" (one tiny HA template
+  # sensor). Per-chore alerts match ",<id>," against it on-device.
+  - platform: homeassistant
+    id: grocy_overdue_chore_ids
+    entity_id: sensor.grocy_overdue_chore_ids
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            id(screen_is_out_of_sync) = true;
+
 sensor:
   - platform: uptime
     name: "Uptime"
@@ -1504,7 +1703,7 @@ sensor:
       bool charging = false;
 
       if (id(battery_voltage_change).has_state()) {
-        float rate = id(battery_voltage_change).state;id(battery_voltage_change).state;
+        float rate = id(battery_voltage_change).state;
         charging = rate > ${battery_charging_rate_threshold_v_per_min} && v >= ${battery_level_int_charging_min_v}; // threshold for charging
       
         if (v < ${battery_level_int_charging_min_v} and id(battery_voltage_change).state < ${battery_level_int_charging_min_v} ) {
@@ -1679,6 +1878,34 @@ sensor:
       - or:
           - throttle: 5min
           - delta: 0.5
+  # Soil-moisture sensors for the alarm grid (alert when below threshold)
+  - platform: homeassistant
+    id: thuja_front_soil
+    entity_id: sensor.thuja_front_soil_moisture
+    unit_of_measurement: "%"
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            id(screen_is_out_of_sync) = true;
+    filters:
+      - or:
+          - throttle: 5min
+          - delta: 0.5
+  - platform: homeassistant
+    id: blue_pot_soil
+    entity_id: sensor.soil_sensor_large_blue_pot_soil_moisture
+    unit_of_measurement: "%"
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            id(screen_is_out_of_sync) = true;
+    filters:
+      - or:
+          - throttle: 5min
+          - delta: 0.5
+
   # Wakeup cause sensor
   - platform: template
     name: "Wakeup Cause"
