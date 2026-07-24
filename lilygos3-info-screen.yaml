@@ -197,6 +197,7 @@ ota:
 
 packages:
   wifi: !include packages/wifi.yaml
+  wifi-roaming: !include packages/wifi-roaming-11kv.yaml   # ESP32-S3 + esp-idf
   wifi-signal-sensors: !include packages/wifi-signal-sensors.yaml
   factory-reset-button: !include packages/factory-reset-button.yaml
 
