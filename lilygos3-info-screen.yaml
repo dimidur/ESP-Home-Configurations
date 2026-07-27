@@ -363,10 +363,15 @@ display:
     model: T-DISPLAY-S3
     spi_id: lcd_spi
     id: disp
-    # Override model default enable_pin [9,15] -> [9] (RD held high). GPIO15 is
-    # LCD_POWER_ON, kept under the existing `backlight` switch for deep-sleep
-    # power cutting. VERIFY: display init needs GPIO15 on before setup.
-    enable_pin: [9]
+    # enable_pin = model default [9, 15]. GPIO15 is LCD_POWER_ON and MUST be driven
+    # high by the display at init so the panel powers up on every deep-sleep wake
+    # (not just a full reset). It is SHARED (allow_other_uses) with the `backlight`
+    # switch, which still drives it low before deep-sleep to cut LCD power. The
+    # display sets it high late in setup (wins over the switch's ALWAYS_OFF boot state).
+    enable_pin:
+      - 9
+      - number: 15
+        allow_other_uses: true
     # Only updated when required; driven by the interval components.
     update_interval: never
     rotation: 270
@@ -1980,6 +1985,9 @@ switch:
   - platform: gpio
     pin:
       number: GPIO15
+      # Shared with the display's enable_pin (LCD_POWER_ON). Display drives it high
+      # at init to power the panel on wake; this switch still cuts it for deep-sleep.
+      allow_other_uses: true
       mode:
         output: true
     id: backlight
@@ -2158,7 +2166,7 @@ script:
           // if not occupied for four hours
           if (
             id(pir_occupancy_last_changed_seconds).state >= ${deepsleep_step_4_threshold_sec}
-            || id(person_state).state != "home"
+            || (id(ha_person_state).has_state() && id(ha_person_state).state != "home")  // guard: empty/unsynced presence must NOT force 1h, else the 30-min tier is clobbered on fast timer wakes
             ) 
           {
             sleep_duration = ${deepsleep_step_4_duration_ms};
