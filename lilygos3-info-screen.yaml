@@ -301,6 +301,17 @@ globals:
     type: bool
     restore_value: true
     initial_value: "false"
+  # Alert-grid value animation: phase flips every 5s tick (same cadence as the
+  # waste blink) while any alert is active; renderers alternate icon <-> value.
+  - id: alarm_anim_phase
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Number of active alerts in the grid, written by render_alarms each redraw
+  - id: active_alarm_count
+    type: int
+    restore_value: false
+    initial_value: "0"
   - id: screen_is_out_of_sync
     type: bool
     restore_value: no
@@ -814,6 +825,17 @@ display:
         return {x, y};
       };
 
+      // Value phase of the alert animation: numeric value centered in the icon
+      // slot, same font/size as the top room temperature & humidity values.
+      // Uniform format: 1 decimal while |value| < 10 (fits the slot), integer above.
+      auto draw_alarm_value = [](display::Display &it, const std::pair<int, int> &position, esphome::Color color, float value) {
+        int icon_size = 40;  // same as get_alarm_icon_position
+        const char *fmt = fabsf(value) < 10 ? "%.1f" : "%.0f";
+        // Slot outline in the alert color - same stroke as the battery/waste shells
+        it.rectangle(position.first, position.second, icon_size, icon_size, color);
+        it.printf(position.first + icon_size / 2, position.second + icon_size / 2, id(font_orbitron_16), color, COLOR_OFF, display::TextAlign::CENTER, fmt, value);
+      };
+
       auto render_rain_index_alert = [&get_alarm_icon_position, &interpolate_channel, &calc_transition_factor](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
@@ -850,13 +872,15 @@ display:
             }
             last_rain_index = val;
           }
+          // No value phase here on purpose: this is the PROBABLE-rain alert (an
+          // index, not a measurement) - only the ongoing-rain alert animates.
           it.image(last_position.first, last_position.second, id(weather_pouring_icon), Color(last_r, last_g, last_b), COLOR_OFF);
           return true;
         }
         return false;
       };
 
-      auto render_heat_alarm = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_heat_alarm = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         static float last_outdoor_temp = -1000.0f;
@@ -890,7 +914,9 @@ display:
             last_result = result;
           }
           if (result) {
-            if (last_icon == 1) {
+            if (id(alarm_anim_phase)) {
+              draw_alarm_value(it, last_position, last_color, outdoor_temp);
+            } else if (last_icon == 1) {
               it.image(last_position.first, last_position.second, id(snowflake_alert_icon), last_color, COLOR_OFF);
             } else if (last_icon == 2) {
               it.image(last_position.first, last_position.second, id(sun_thermometer_icon), last_color, COLOR_OFF);
@@ -901,7 +927,7 @@ display:
         return false;
       };
 
-      auto render_wind_alert = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_wind_alert = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         static float last_bft = -1000.0f;
@@ -922,14 +948,18 @@ display:
             last_bft = bft;
           }
           if (bft >= 4) {
-            it.image(last_position.first, last_position.second, id(wind_icon), last_color, COLOR_OFF);
+            if (id(alarm_anim_phase)) {
+              draw_alarm_value(it, last_position, last_color, bft);
+            } else {
+              it.image(last_position.first, last_position.second, id(wind_icon), last_color, COLOR_OFF);
+            }
             return true;
           }
         }
         return false;
       };
 
-      auto render_rain_rate_alert = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_rain_rate_alert = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         static float last_val = -1000.0f;
@@ -951,13 +981,17 @@ display:
             }
             last_val = val;
           }
-          it.image(last_position.first, last_position.second, id(weather_pouring_icon), Color(last_r, last_g, last_b), COLOR_OFF);
+          if (id(alarm_anim_phase)) {
+            draw_alarm_value(it, last_position, Color(last_r, last_g, last_b), val);
+          } else {
+            it.image(last_position.first, last_position.second, id(weather_pouring_icon), Color(last_r, last_g, last_b), COLOR_OFF);
+          }
           return true;
         }
         return false;
       };
 
-      auto render_lightning_alert = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_lightning_alert = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         static float last_val = -1000.0f;
@@ -976,7 +1010,11 @@ display:
             last_b = 0;
             last_val = val;
           }
-          it.image(last_position.first, last_position.second, id(weather_lightning_rainy_icon), Color(last_r, last_g, last_b), COLOR_OFF);
+          if (id(alarm_anim_phase)) {
+            draw_alarm_value(it, last_position, Color(last_r, last_g, last_b), val);
+          } else {
+            it.image(last_position.first, last_position.second, id(weather_lightning_rainy_icon), Color(last_r, last_g, last_b), COLOR_OFF);
+          }
           return true;
         }
         return false;
@@ -1065,7 +1103,7 @@ display:
       };
 
       // --- Soil-moisture alerts: active below threshold (%). ---
-      auto render_soil_thuja = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_soil_thuja = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         if (alarm_num != last_alarm_num) {
@@ -1077,8 +1115,13 @@ display:
           // Red = no data (unknown/unavailable), yellow = dry
           if (isnan(moisture) || moisture < ${soil_moisture_threshold_dry}) {
             if (alarm_num >= 0) {
-              it.image(last_position.first, last_position.second, id(soil_thuja_icon),
-                       isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+              // No value phase when NaN - there is no number to show
+              if (id(alarm_anim_phase) && !isnan(moisture)) {
+                draw_alarm_value(it, last_position, id(color_yellow), moisture);
+              } else {
+                it.image(last_position.first, last_position.second, id(soil_thuja_icon),
+                         isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+              }
             }
             return true;
           }
@@ -1086,7 +1129,7 @@ display:
         return false;
       };
 
-      auto render_soil_blue_pot = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
+      auto render_soil_blue_pot = [&get_alarm_icon_position, &draw_alarm_value](display::Display &it, int alarm_num) -> bool {
         static int last_alarm_num = -1;
         static std::pair<int, int> last_position;
         if (alarm_num != last_alarm_num) {
@@ -1098,8 +1141,13 @@ display:
           // Red = no data (unknown/unavailable), yellow = dry
           if (isnan(moisture) || moisture < ${soil_moisture_threshold_dry}) {
             if (alarm_num >= 0) {
-              it.image(last_position.first, last_position.second, id(soil_blue_pot_icon),
-                       isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+              // No value phase when NaN - there is no number to show
+              if (id(alarm_anim_phase) && !isnan(moisture)) {
+                draw_alarm_value(it, last_position, id(color_yellow), moisture);
+              } else {
+                it.image(last_position.first, last_position.second, id(soil_blue_pot_icon),
+                         isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+              }
             }
             return true;
           }
@@ -1135,6 +1183,8 @@ display:
             alarm_num++;
           }
         }
+        // Read by the 5s interval to drive the icon <-> value animation phase
+        id(active_alarm_count) = alarm_num;
         if (overflow) {
           // Small yellow triangle at the bottom-right of the grid = "more active
           // alerts than fit". Pagination/animation is a later enhancement.
@@ -1391,7 +1441,9 @@ font:
     size: 36
     bpp: 4
     glyphs: ["0123456789", ":"]
-  - file: "gfonts://Orbitron"
+  # Weight 600: the default 400 renders too thin after the mipi_spi driver
+  # migration (date, top temp/humidity, waste + alert numbers hard to read).
+  - file: "gfonts://Orbitron@600"
     id: font_orbitron_16
     size: 16
     bpp: 4
@@ -2335,6 +2387,13 @@ interval:
               id(waste_sensor_alert_status) = false;
               id(screen_is_out_of_sync) = true;
             }
+          }
+
+          // Alert-grid value animation: flip the icon <-> value phase while any
+          // alert is active (same cadence as the waste blink above)
+          if (id(active_alarm_count) > 0) {
+            id(alarm_anim_phase) = !id(alarm_anim_phase);
+            id(screen_is_out_of_sync) = true;
           }
       # Update display if device is not charging (on battery)
       - if:
