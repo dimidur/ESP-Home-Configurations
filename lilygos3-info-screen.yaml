@@ -59,6 +59,8 @@ substitutions:
   humidity_lower_threshold_yellow: "50"
   humidity_upper_threshold_red: "75"
   humidity_lower_threshold_red: "35"
+  # Soil moisture threshold below which the soil alerts show as dry (%)
+  soil_moisture_threshold_dry: "70"
 
   # deepsleep ==============================================
   deepsleep_delay: "60sec"
@@ -129,9 +131,20 @@ esphome:
       # publish required states on boot
       then:
         - lambda: |-
-            id(in_deep_sleep).publish_state(false);                  
+            id(in_deep_sleep).publish_state(false);
             id(wakeup_cause).publish_state(esp_sleep_get_wakeup_cause());
             id(hw_initialized) = true;
+            // Seed-republish the last known battery state (restored from flash) so
+            // HA sees a value instead of `unknown` when it connects, even on wakes
+            // too short for the filtered ADC chain to publish. Voltage > 0 means a
+            // previous session actually published something.
+            if (id(last_published_battery_voltage) > 0) {
+              id(battery_voltage).publish_state(id(last_published_battery_voltage));
+              id(is_charging).publish_state(id(last_published_is_charging));
+            }
+            if (id(last_published_battery_level) >= 0) {
+              id(battery_level).publish_state(id(last_published_battery_level));
+            }
     # Check deep sleep conditions after everything is initialized
     - priority: ${late_boot_priority}
       then:
@@ -270,6 +283,24 @@ globals:
     type: float
     restore_value: no
     initial_value: "0"
+  # Last battery values published to HA (restored across deep sleep, synced to
+  # flash on sleep entry). Seed-republished in on_boot so short wakes don't wipe
+  # the HA entities to `unknown` before the filtered ADC chain manages a fresh
+  # publish (~50s on stable wakes, never on short ones). Fresh chain values
+  # overwrite the seeds shortly after. NVS wear is negligible (log-structured,
+  # wear-leveled, unchanged values skipped).
+  - id: last_published_battery_voltage
+    type: float
+    restore_value: true
+    initial_value: "0"
+  - id: last_published_battery_level
+    type: float
+    restore_value: true
+    initial_value: "-1"
+  - id: last_published_is_charging
+    type: bool
+    restore_value: true
+    initial_value: "false"
   - id: screen_is_out_of_sync
     type: bool
     restore_value: no
@@ -1035,21 +1066,45 @@ display:
 
       // --- Soil-moisture alerts: active below threshold (%). ---
       auto render_soil_thuja = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
-        bool active = id(thuja_front_soil).has_state() && id(thuja_front_soil).state < 70;
-        if (active && alarm_num >= 0) {
-          auto pos = get_alarm_icon_position(alarm_num);
-          it.image(pos.first, pos.second, id(soil_thuja_icon), id(color_yellow), COLOR_OFF);
+        static int last_alarm_num = -1;
+        static std::pair<int, int> last_position;
+        if (alarm_num != last_alarm_num) {
+          last_position = get_alarm_icon_position(alarm_num);
+          last_alarm_num = alarm_num;
         }
-        return active;
+        if (id(thuja_front_soil).has_state()) {
+          float moisture = id(thuja_front_soil).state;
+          // Red = no data (unknown/unavailable), yellow = dry
+          if (isnan(moisture) || moisture < ${soil_moisture_threshold_dry}) {
+            if (alarm_num >= 0) {
+              it.image(last_position.first, last_position.second, id(soil_thuja_icon),
+                       isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+            }
+            return true;
+          }
+        }
+        return false;
       };
 
       auto render_soil_blue_pot = [&get_alarm_icon_position](display::Display &it, int alarm_num) -> bool {
-        bool active = id(blue_pot_soil).has_state() && id(blue_pot_soil).state < 70;
-        if (active && alarm_num >= 0) {
-          auto pos = get_alarm_icon_position(alarm_num);
-          it.image(pos.first, pos.second, id(soil_blue_pot_icon), id(color_yellow), COLOR_OFF);
+        static int last_alarm_num = -1;
+        static std::pair<int, int> last_position;
+        if (alarm_num != last_alarm_num) {
+          last_position = get_alarm_icon_position(alarm_num);
+          last_alarm_num = alarm_num;
         }
-        return active;
+        if (id(blue_pot_soil).has_state()) {
+          float moisture = id(blue_pot_soil).state;
+          // Red = no data (unknown/unavailable), yellow = dry
+          if (isnan(moisture) || moisture < ${soil_moisture_threshold_dry}) {
+            if (alarm_num >= 0) {
+              it.image(last_position.first, last_position.second, id(soil_blue_pot_icon),
+                       isnan(moisture) ? id(color_red) : id(color_yellow), COLOR_OFF);
+            }
+            return true;
+          }
+        }
+        return false;
       };
 
       auto render_alarms = [&render_heat_alarm, &render_wind_alert, &render_rain_alarm,
@@ -1643,6 +1698,10 @@ sensor:
     accuracy_decimals: 2
     state_class: measurement
     device_class: voltage
+    on_value:
+      then:
+        # Remember for the on_boot seed-republish (avoids `unknown` in HA)
+        - lambda: id(last_published_battery_voltage) = x;
   # Battery voltage change rate sensor (to be published to Home Assistant)
   # This sensor value is published by internal battery voltage sensor
   - platform: template
@@ -1700,6 +1759,8 @@ sensor:
       then:
         - lambda: |-
             id(screen_is_out_of_sync) = true;
+            // Remember for the on_boot seed-republish (avoids `unknown` in HA)
+            id(last_published_battery_level) = x;
     lambda: |-
       if (!id(battery_voltage_int).has_state()) {
         return {};
@@ -1722,6 +1783,7 @@ sensor:
       }
 
       id(is_charging).publish_state(charging);
+      id(last_published_is_charging) = charging;
 
       float min_v = charging ? ${battery_level_int_charging_min_v} : ${battery_level_int_min_v};
       float max_v = charging ? ${battery_level_int_charging_max_v} : ${battery_level_int_max_v};
