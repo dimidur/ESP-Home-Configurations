@@ -61,6 +61,11 @@ substitutions:
   humidity_lower_threshold_red: "35"
   # Soil moisture threshold below which the soil alerts show as dry (%)
   soil_moisture_threshold_dry: "70"
+  # Backlight brightness floor: a turn-on resulting in brightness at/below this
+  # is considered "on but dark" (remembered 0 after unclean power loss) (0-1)
+  backlight_on_min_brightness: "0.05"
+  # Brightness applied when a turn-on lands at/below the floor (0-1)
+  backlight_on_default_brightness: "0.8"
 
   # deepsleep ==============================================
   deepsleep_delay: "60sec"
@@ -352,9 +357,23 @@ output:
 light:
   # Backlight control
   - platform: monochromatic
+    id: backlight_brightness
     output: gpio38
     name: "Backlight brightness"
     restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      then:
+        # Guard against "on at ~0 brightness" (remembered 0 after an unclean
+        # power loss made the HA on/off toggle light nothing). Reads the TARGET
+        # (remote_values), not the mid-transition current_values which is ~0 at
+        # this point. Self-terminating: the re-issued call is above the floor.
+        - lambda: |-
+            float brightness = id(backlight_brightness).remote_values.get_brightness();
+            if (brightness <= ${backlight_on_min_brightness}) {
+              auto call = id(backlight_brightness).turn_on();
+              call.set_brightness(${backlight_on_default_brightness});
+              call.perform();
+            }
 
 # Color palette
 color:
@@ -1461,7 +1480,15 @@ binary_sensor:
       - timing:
           - ON FOR AT LEAST 500ms
         then:
-          switch.toggle: backlight_on_bat
+          - switch.toggle: backlight_on_bat
+          # Physical hold that ENABLES battery backlight also lights the screen
+          # (HA toggles of the switch entity never run this handler)
+          - if:
+              condition:
+                - switch.is_on: backlight_on_bat
+                - light.is_off: backlight_brightness
+              then:
+                - light.turn_on: backlight_brightness
   # Button Down
   - platform: gpio
     pin:
