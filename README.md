@@ -684,7 +684,7 @@ Some configurations are based on or inspired by the following awesome community 
 
 If you find these configurations helpful, you can support my work:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/dmmk)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=github-sponsors&logoColor=white)](https://github.com/sponsors/dimidur)
 
 ---
 
