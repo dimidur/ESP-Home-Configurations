@@ -10,8 +10,8 @@ substitutions:
   wifi_manual_ip_gateway: !secret wifi_manual_ip_gateway
   wifi_manual_ip_subnet: !secret wifi_manual_ip_subnet
   mqtt_broker: !secret mqtt_broker
-  mqtt_username: !secret mqtt_username
-  mqtt_password: !secret mqtt_password
+  mqtt_username: !secret mqtt_username_electric_meter
+  mqtt_password: !secret mqtt_password_electric_meter
   mqtt_topic_prefix: tele/tasmota_3D87A3
   mqtt_discovery: "true"
   mqtt_lwt_topic_suffix: "/LWT"
