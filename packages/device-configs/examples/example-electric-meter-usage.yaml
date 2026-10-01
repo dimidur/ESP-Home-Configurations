@@ -1,6 +1,6 @@
 ---
 # Example Electric Meter Configuration
-# This demonstrates how to use the electric-meter package with different settings
+# Shows how to use the electric-meter package with different settings
 
 substitutions:
   name: my-electric-meter
@@ -12,12 +12,12 @@ substitutions:
   wifi_password: "mywifipass"
   wifi_manual_ip_gateway: 192.168.1.1
   wifi_manual_ip_subnet: 255.255.255.0
-  
+
   # MQTT Configuration
   mqtt_broker: "192.168.1.50"        # Your MQTT broker IP/hostname
   mqtt_username: "esphome"           # Your MQTT username
-  mqtt_password: "your_mqtt_password" # Your MQTT password
-  mqtt_topic_prefix: "esphome/my-electric-meter" # MQTT topic prefix for this device
+  mqtt_password: "your_mqtt_password"  # Your MQTT password
+  mqtt_topic_prefix: "esphome/my-electric-meter"  # MQTT topic prefix
 
   # UART Configuration - adjust these for your meter
   uart_rx_pin: "D5"           # Change to your RX pin
@@ -27,24 +27,24 @@ substitutions:
   uart_stop_bits: "1"         # Usually 1
   uart_rx_buffer_size: "512"  # Adjust if needed
 
-  # Sensor Group Control (set to "true" to disable processing and hide by default)
-  # Enable/disable entire sensor groups to optimize performance and reduce clutter
-  disabled_core_sensors: "false"                      # Total consumption, current power (keep enabled for basic functionality)
-  disabled_feed_in_sensors: "false"                   # Total feed-in (set to "true" if no solar installation)
-  disabled_voltage_sensors: "false"                   # L1, L2, L3 voltage sensors
-  disabled_current_sensors: "false"                   # L1, L2, L3 current sensors
-  disabled_frequency_sensors: "false"                 # Grid frequency sensor
-  disabled_phase_angle_sensors: "true"                # Phase angle sensors (advanced use only)
-  disabled_tariff_sensors: "false"                    # T1, T2 tariff consumption sensors
-  disabled_consumption_since_reset_sensors: "true"    # Consumption since reset sensor
-  disabled_rolling_window_sensors: "false"            # 1d, 7d, 30d, 365d consumption sensors
-  disabled_diagnostic_sensors: "false"                # Serial number, firmware version, etc.
-  disabled_quality_sensors: "false"                   # Communication quality monitoring
+  # Sensor group control: set to "true" to disable a group's processing and
+  # hide it by default. Fewer groups means less load and less clutter.
+  disabled_core_sensors: "false"  # total consumption, current power; keep on
+  disabled_feed_in_sensors: "false"  # total feed-in; "true" without solar
+  disabled_voltage_sensors: "false"  # L1, L2, L3 voltage
+  disabled_current_sensors: "false"  # L1, L2, L3 current
+  disabled_frequency_sensors: "false"  # grid frequency
+  disabled_phase_angle_sensors: "true"  # phase angles (advanced use only)
+  disabled_tariff_sensors: "false"  # T1, T2 tariff consumption
+  disabled_consumption_since_reset_sensors: "true"  # consumption since reset
+  disabled_rolling_window_sensors: "false"  # 1d, 7d, 30d, 365d consumption
+  disabled_diagnostic_sensors: "false"  # serial number, firmware version
+  disabled_quality_sensors: "false"  # communication quality monitoring
 
   # OBIS codes - these are specific to your meter model
   # Check your meter's documentation for the correct codes
   obis_total_consumption: "1-0:1.8.0*255"
-  obis_total_feed_in: "1-0:2.8.0*255"          # For solar installations (total feed-in)
+  obis_total_feed_in: "1-0:2.8.0*255"  # for solar installations
   obis_consumption_1d: "1-0:1.8.0*96"
   obis_consumption_7d: "1-0:1.8.0*97"
   obis_consumption_30d: "1-0:1.8.0*98"
@@ -74,7 +74,7 @@ substitutions:
   max_power_change: "5000.0"           # 5kW max power change per reading
   max_current_change: "20.0"           # 20A max current change per reading
   max_energy_change: "2.0"             # 2 kWh max energy change per reading
-  max_rolling_energy_change: "2.0"     # 2 kWh max change for rolling window sensors
+  max_rolling_energy_change: "2.0"     # 2 kWh max change, rolling windows
   max_energy_total: "200000.0"         # 200,000 kWh lifetime maximum
   max_absolute_power: "50000.0"        # 50kW absolute maximum
   min_energy_value: "0.0"
@@ -99,7 +99,8 @@ esphome:
   friendly_name: ${friendly_name}
   min_version: 2024.6.0
 
-# Required for uart_line_reader and deduplicate_text components used by electricity-meter package
+# Required for the uart_line_reader and deduplicate_text components used by
+# the electricity-meter package
 # Uncomment if you have the custom components directory:
 # external_components:
 #   - source:
@@ -139,22 +140,16 @@ packages:
   # WiFi configuration (you'll need to create this or use existing)
   # wifi: !include ../../wifi.yaml
   # wifi-signal-sensors: !include ../../wifi-signal-sensors.yaml
-  
+
   # MQTT configuration
   mqtt: !include ../../mqtt.yaml
   mqtt-diagnostic-sensors: !include ../../mqtt-diagnostic-sensors.yaml
-  
+
   # Electricity meter package
   electricity-meter: !include ../electricity-meter.yaml
 
-# Optional: Add a status LED
-status_led:
-  pin:
-    number: D4
-    inverted: true
-
 # Example sensor group configurations:
-# 
+#
 # For a basic installation (only essential sensors):
 # disabled_core_sensors: "false"
 # disabled_feed_in_sensors: "true"
@@ -192,4 +187,10 @@ status_led:
 # disabled_consumption_since_reset_sensors: "false"
 # disabled_rolling_window_sensors: "false"
 # disabled_diagnostic_sensors: "false"
-# disabled_quality_sensors: "false" 
+# disabled_quality_sensors: "false"
+
+# Optional: Add a status LED
+status_led:
+  pin:
+    number: D4
+    inverted: true

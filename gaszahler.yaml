@@ -40,7 +40,7 @@ api:
             value: !lambda "return (new_meter_value);"
         - logger.log:
             format: "Current pulses value is %d"
-            args: [id(total_pulses)]            
+            args: [id(total_pulses)]
 
 ota:
   - platform: esphome
@@ -111,7 +111,7 @@ switch:
 time:
   - platform: sntp
     timezone: Europe/Berlin
-    servers: 
+    servers:
       - !secret wifi_manual_ip_gateway
       - "0.pool.ntp.org"
       - "1.pool.ntp.org"

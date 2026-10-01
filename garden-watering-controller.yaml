@@ -43,7 +43,7 @@ web_server:
 i2c:
   sda: 21
   scl: 22
-  scan: True
+  scan: true
 
 xl9535:
   - id: xl9535_hub
@@ -141,7 +141,9 @@ binary_sensor:
     on_state:
       - lambda: |-
           if (!id(uptime_sensor).has_state() || id(uptime_sensor).state < 10) {
-             ESP_LOGD("physical_switch", "Switch has not been activated yet, please try again in a few seconds...");
+             ESP_LOGD("physical_switch",
+                      "Switch has not been activated yet, "
+                      "please try again in a few seconds...");
              return;
           }
 

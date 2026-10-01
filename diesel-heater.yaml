@@ -10,24 +10,27 @@ substitutions:
   wifi_manual_ip_gateway: !secret wifi_manual_ip_gateway
   wifi_manual_ip_subnet: !secret wifi_manual_ip_subnet
 
-  # RF address of your heater — run the find_address HA service to discover it,
+  # RF address of your heater: run the find_address HA service to discover it,
   # then replace the value below and re-flash.
   heater_address: !secret diesel_heater_address
 
-  # CC1101 wiring — defaults match the reference schematic (GPIO4/18/19/23/5)
+  # CC1101 wiring: defaults match the reference schematic (GPIO4/18/19/23/5)
   heater_gdo2_pin: "4"
   heater_sck_pin: "18"
   heater_miso_pin: "19"
   heater_mosi_pin: "23"
   heater_cs_pin: "5"
   heater_frequency: "433"
-  # Compensate for CC1101 crystal offset. Positive = shift up (right on waterfall).
-  # Measure the gap between module and remote/heater signals in SDR++ and set accordingly.
+  # Compensate for CC1101 crystal offset. Positive = shift up (right on
+  # waterfall). Measure the gap between module and remote/heater signals in
+  # SDR++ and set accordingly.
   # Example: if module is 50 kHz below remote, use "50000".
   heater_frequency_offset_hz: "36000"
-  # CC1101 CCA mode: 0=always TX, 1=RSSI below threshold, 2=not receiving, 3=RSSI+not receiving
+  # CC1101 CCA mode: 0=always TX, 1=RSSI below threshold, 2=not receiving,
+  # 3=RSSI+not receiving
   heater_cca_mode: "0"
-  # CC1101 TX power (PATABLE index): 0=off, 1=-30dBm, 2=-20dBm, 3=-10dBm, 4=0dBm, 5=+7dBm, 6≈+9dBm, 7=+10dBm
+  # CC1101 TX power (PATABLE index): 0=off, 1=-30dBm, 2=-20dBm, 3=-10dBm,
+  # 4=0dBm, 5=+7dBm, 6≈+9dBm, 7=+10dBm
   # Reduce if heater ignores commands at close range (front-end overload)
   heater_tx_power: "3"
 
@@ -65,13 +68,15 @@ ota:
     encryption: {}  # key inherited from api; plaintext OTA refused
 
 wifi:
-  # Reduce WiFi TX power — signal is -51 dBm at full power (20 dB), far more than needed.
-  # Lower power reduces current spikes on the shared 3.3V rail that brownout-reset the CC1101.
+  # Reduce WiFi TX power: signal is -51 dBm at full power (20 dB), far more
+  # than needed. Lower power reduces current spikes on the shared 3.3V rail
+  # that brownout-reset the CC1101.
   output_power: 8.5dB
-  # Skip background scanning — connect directly to the configured AP.
-  # Roam scans cause channel hopping + WiFi TX bursts that correlate with CC1101 register corruption.
+  # Skip background scanning: connect directly to the configured AP. Roam
+  # scans cause channel hopping + WiFi TX bursts that correlate with CC1101
+  # register corruption.
   fast_connect: true
-  # post_connect_roaming: false 
+  # post_connect_roaming: false
 
 packages:
   wifi: !include packages/wifi.yaml
