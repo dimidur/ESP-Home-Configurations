@@ -120,7 +120,7 @@ api:
 # Enable OTA updates
 ota:
   - platform: esphome
-    password: "your_ota_password"
+    encryption: {}  # key inherited from api; plaintext OTA refused
 
 # WiFi configuration
 wifi:

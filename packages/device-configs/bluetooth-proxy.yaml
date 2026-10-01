@@ -21,7 +21,7 @@ api:
 
 ota:
   - platform: esphome
-    password: ${esp_ota_password}
+    encryption: {}  # key inherited from api; plaintext OTA refused
     id: ota_esphome
   - platform: http_request
     id: ota_http_request

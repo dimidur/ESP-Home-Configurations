@@ -27,7 +27,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret 3d_printer_socket_esp_ota_password
+    encryption: {}  # key inherited from api; plaintext OTA refused
 
 packages:
   wifi: !include packages/wifi.yaml

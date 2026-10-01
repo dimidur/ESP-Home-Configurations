@@ -10,7 +10,6 @@ substitutions:
   wifi_manual_ip_gateway: !secret wifi_manual_ip_gateway
   wifi_manual_ip_subnet: !secret wifi_manual_ip_subnet
   api_encryption_key: !secret bluetooth_proxy_bedroom_esp_api_encryption_key
-  esp_ota_password: !secret bluetooth_proxy_bedroom_esp_ota_password
   manifest_url: https://firmware.esphome.io/bluetooth-proxy/esp32-generic/manifest.json
   dashboard_import: github://esphome/bluetooth-proxies/esp32-generic/esp32-generic.yaml@main
   board: esp32dev

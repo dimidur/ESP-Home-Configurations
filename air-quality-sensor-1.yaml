@@ -53,7 +53,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret air_quality_sensor_1_esp_ota_password
+    encryption: {}  # key inherited from api; plaintext OTA refused
 
 # In combination with the `ap` this allows the user
 # to provision wifi credentials to the device via WiFi AP.

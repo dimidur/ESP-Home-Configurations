@@ -27,7 +27,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret compressor_valve_esp_ota_password
+    encryption: {}  # key inherited from api; plaintext OTA refused
 
 wifi:
   output_power: 10dBm

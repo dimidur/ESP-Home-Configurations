@@ -44,7 +44,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret gaszahler_esp_ota_password
+    encryption: {}  # key inherited from api; plaintext OTA refused
     id: ota_esphome
 
 packages:

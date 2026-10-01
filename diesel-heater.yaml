@@ -62,7 +62,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret diesel_heater_esp_ota_password
+    encryption: {}  # key inherited from api; plaintext OTA refused
 
 wifi:
   # Reduce WiFi TX power — signal is -51 dBm at full power (20 dB), far more than needed.
