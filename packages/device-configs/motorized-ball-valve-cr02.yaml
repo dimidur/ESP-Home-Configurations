@@ -1,0 +1,107 @@
+---
+# Motorized ball valve, 3-wire 2-control (CR02 / CR301), driven by two relays
+# in series. Exposes one template valve entity.
+#
+# Wiring (defaults match the ESP32 Relay X2 board):
+#   PSU+                -> power relay COM
+#   power relay NO      -> direction relay COM
+#   direction relay NO  -> valve OPEN wire
+#   direction relay NC  -> valve CLOSE wire
+#   PSU-                -> valve COMMON
+#
+# The changeover contact cannot feed OPEN and CLOSE at once, and the direction
+# relay only ever switches while the power relay is off. With both relays off
+# nothing is fed, so a reboot or crash leaves the valve where it is.
+#
+# There is no position feedback: the valve's internal limit switches stop the
+# motor, and the reported state assumes the stroke completed.
+#
+# Optional substitutions: everything in the block below.
+
+substitutions:
+  valve_name: Valve
+  valve_device_class: water
+  valve_power_relay_pin: GPIO16
+  valve_direction_relay_pin: GPIO17
+  # How long the motor is fed per stroke: the valve's rated stroke time plus
+  # margin. The limit switches cut the motor earlier; this only bounds it.
+  valve_travel_time: 20s
+  # Pause either side of a direction change, with the power relay open.
+  valve_relay_settle_time: 200ms
+
+switch:
+  - platform: gpio
+    id: valve_power_relay
+    pin: ${valve_power_relay_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+  - platform: gpio
+    id: valve_direction_relay  # on = OPEN wire, off (NC) = CLOSE wire
+    pin: ${valve_direction_relay_pin}
+    restore_mode: ALWAYS_OFF
+    internal: true
+
+script:
+  - id: valve_drive
+    mode: restart
+    parameters:
+      open_valve: bool
+    then:
+      - switch.turn_off: valve_power_relay
+      - delay: ${valve_relay_settle_time}
+      - if:
+          condition:
+            lambda: return open_valve;
+          then:
+            - switch.turn_on: valve_direction_relay
+            - valve.template.publish:
+                id: motorized_valve
+                current_operation: OPENING
+          else:
+            - switch.turn_off: valve_direction_relay
+            - valve.template.publish:
+                id: motorized_valve
+                current_operation: CLOSING
+      - delay: ${valve_relay_settle_time}
+      - switch.turn_on: valve_power_relay
+      - delay: ${valve_travel_time}
+      - switch.turn_off: valve_power_relay
+      - delay: ${valve_relay_settle_time}
+      - switch.turn_off: valve_direction_relay
+      - if:
+          condition:
+            lambda: return open_valve;
+          then:
+            - valve.template.publish:
+                id: motorized_valve
+                state: OPEN
+                current_operation: IDLE
+          else:
+            - valve.template.publish:
+                id: motorized_valve
+                state: CLOSED
+                current_operation: IDLE
+
+valve:
+  - platform: template
+    id: motorized_valve
+    name: ${valve_name}
+    device_class: ${valve_device_class}
+    assumed_state: true
+    restore_mode: RESTORE
+    open_action:
+      - script.execute:
+          id: valve_drive
+          open_valve: true
+    close_action:
+      - script.execute:
+          id: valve_drive
+          open_valve: false
+    stop_action:
+      - script.stop: valve_drive
+      - switch.turn_off: valve_power_relay
+      - delay: ${valve_relay_settle_time}
+      - switch.turn_off: valve_direction_relay
+      - valve.template.publish:
+          id: motorized_valve
+          current_operation: IDLE
