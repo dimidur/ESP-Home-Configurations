@@ -18,6 +18,11 @@ substitutions:
   mqtt_username: "esphome"           # Your MQTT username
   mqtt_password: "your_mqtt_password"  # Your MQTT password
   mqtt_topic_prefix: "esphome/my-electric-meter"  # MQTT topic prefix
+  mqtt_discovery: "true"  # Home Assistant MQTT discovery
+  mqtt_keepalive: 60s
+  mqtt_lwt_topic_suffix: "/status"
+  mqtt_lwt_online_payload: "online"
+  mqtt_lwt_offline_payload: "offline"
 
   # UART Configuration - adjust these for your meter
   uart_rx_pin: "D5"           # Change to your RX pin
@@ -31,6 +36,7 @@ substitutions:
   # hide it by default. Fewer groups means less load and less clutter.
   disabled_core_sensors: "false"  # total consumption, current power; keep on
   disabled_feed_in_sensors: "false"  # total feed-in; "true" without solar
+  disabled_phase_power_sensors: "false"  # L1, L2, L3 active power
   disabled_voltage_sensors: "false"  # L1, L2, L3 voltage
   disabled_current_sensors: "false"  # L1, L2, L3 current
   disabled_frequency_sensors: "false"  # grid frequency
@@ -50,6 +56,9 @@ substitutions:
   obis_consumption_30d: "1-0:1.8.0*98"
   obis_consumption_365d: "1-0:1.8.0*99"
   obis_current_power: "1-0:16.7.0*255"
+  obis_power_l1: "1-0:36.7.0*255"
+  obis_power_l2: "1-0:56.7.0*255"
+  obis_power_l3: "1-0:76.7.0*255"
   obis_consumption_t1: "1-0:1.8.1*255"
   obis_consumption_t2: "1-0:1.8.2*255"
   obis_voltage_l1: "1-0:32.7.0*255"
@@ -99,13 +108,12 @@ esphome:
   friendly_name: ${friendly_name}
   min_version: 2024.6.0
 
-# Required for the uart_line_reader and deduplicate_text components used by
-# the electricity-meter package
-# Uncomment if you have the custom components directory:
-# external_components:
-#   - source:
-#       type: local
-#       path: components
+# Required for the electricity_meter_reader and deduplicate_text components
+# used by the electricity-meter package; the path is relative to this file
+external_components:
+  - source:
+      type: local
+      path: ../../../components
 
 esp8266:
   board: nodemcu  # or d1_mini, wemos_d1_mini32, etc.
@@ -114,14 +122,11 @@ esp8266:
 logger:
   level: INFO  # Change to DEBUG for more verbose logging
 
-# Enable Home Assistant API
-api:
-  password: "your_api_password"
-
-# Enable OTA updates
+# Home Assistant gets the sensors over MQTT (see packages below), so there
+# is no api block; without api, OTA uses a password
 ota:
   - platform: esphome
-    encryption: {}  # key inherited from api; plaintext OTA refused
+    password: "your_ota_password"
 
 # WiFi configuration
 wifi:
@@ -153,6 +158,7 @@ packages:
 # For a basic installation (only essential sensors):
 # disabled_core_sensors: "false"
 # disabled_feed_in_sensors: "true"
+# disabled_phase_power_sensors: "true"
 # disabled_voltage_sensors: "true"
 # disabled_current_sensors: "true"
 # disabled_frequency_sensors: "true"
@@ -166,6 +172,7 @@ packages:
 # For a solar installation:
 # disabled_core_sensors: "false"
 # disabled_feed_in_sensors: "false"  # Enable to track solar feed-in
+# disabled_phase_power_sensors: "false"
 # disabled_voltage_sensors: "false"
 # disabled_current_sensors: "false"
 # disabled_frequency_sensors: "false"
@@ -179,6 +186,7 @@ packages:
 # For advanced monitoring (all sensors):
 # disabled_core_sensors: "false"
 # disabled_feed_in_sensors: "false"
+# disabled_phase_power_sensors: "false"
 # disabled_voltage_sensors: "false"
 # disabled_current_sensors: "false"
 # disabled_frequency_sensors: "false"

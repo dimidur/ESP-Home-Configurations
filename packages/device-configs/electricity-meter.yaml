@@ -1,103 +1,55 @@
 ---
 # Electric Meter Package - Generic OBIS smart meter support
-# 
-# IMPORTANT: This package requires custom components (uart_line_reader and deduplicate_text).
-# You must include this in your main configuration:
+#
+# Reads push-mode IEC 62056-21 text meters and SML meters alike: with 8
+# data bits and no parity both arrive as the same OBIS text lines
+# (electricity_meter_reader component).
+#
+# IMPORTANT: This package requires the custom electricity_meter_reader and
+# deduplicate_text components. You must include this in your main
+# configuration:
 # external_components:
 #   - source:
 #       type: local
 #       path: components
-# 
-# Requires the following substitutions to be defined in the main configuration:
 #
-# UART Configuration:
-#   uart_rx_pin: GPIO pin for UART RX (e.g., "D2")
-#   uart_baud_rate: UART baud rate (e.g., "9600")
-#   uart_parity: UART parity (e.g., "EVEN" or "NONE")
-#   uart_data_bits: UART data bits (e.g., "7" or "8")
-#   uart_stop_bits: UART stop bits (e.g., "1")
-#   uart_rx_buffer_size: UART RX buffer size (e.g., "1024")
-#
-# Sensor Group Control (set to "true" to disable processing and hide by default):
-#   disabled_core_sensors: Disable core sensors (total consumption, current power) (default: "false")
-#   disabled_feed_in_sensors: Disable feed-in sensors (total feed-in) (default: "false")
-#   disabled_voltage_sensors: Disable voltage L1/L2/L3 sensors (default: "false")
-#   disabled_current_sensors: Disable current L1/L2/L3 sensors (default: "false")
-#   disabled_frequency_sensors: Disable frequency sensor (default: "false")
-#   disabled_phase_angle_sensors: Disable phase angle sensors (default: "false")
-#   disabled_tariff_sensors: Disable T1/T2 consumption sensors (default: "false")
-#   disabled_consumption_since_reset_sensors: Disable consumption since reset sensor (default: "false")
-#   disabled_rolling_window_sensors: Disable 1d/7d/30d/365d consumption sensors (default: "false")
-#   disabled_diagnostic_sensors: Disable diagnostic sensors (serial, firmware, etc.) (default: "false")
-#   disabled_quality_sensors: Disable communication quality sensors (default: "false")
-#
-# OBIS Codes:
-#   obis_total_consumption: Total energy consumption OBIS code
-#   obis_consumption_1d: 1-day consumption OBIS code
-#   obis_consumption_7d: 7-day consumption OBIS code
-#   obis_consumption_30d: 30-day consumption OBIS code
-#   obis_consumption_365d: 365-day consumption OBIS code
-#   obis_current_power: Current power OBIS code
-#   obis_consumption_t1: T1 consumption OBIS code
-#   obis_consumption_t2: T2 consumption OBIS code
-#   obis_voltage_l1: L1 voltage OBIS code
-#   obis_voltage_l2: L2 voltage OBIS code
-#   obis_voltage_l3: L3 voltage OBIS code
-#   obis_current_l1: L1 current OBIS code
-#   obis_current_l2: L2 current OBIS code
-#   obis_current_l3: L3 current OBIS code
-#   obis_frequency: Frequency OBIS code
-#   obis_phase_angle_ul2_ul1: Phase angle UL2:UL1 OBIS code
-#   obis_phase_angle_ul3_ul1: Phase angle UL3:UL1 OBIS code
-#   obis_phase_angle_il1_ul1: Phase angle IL1:UL1 OBIS code
-#   obis_phase_angle_il2_ul2: Phase angle IL2:UL2 OBIS code
-#   obis_phase_angle_il3_ul3: Phase angle IL3:UL3 OBIS code
-#   obis_serial_number: Serial number OBIS code
-#   obis_firmware_version: Firmware version OBIS code
-#   obis_parameter_crc: Parameter CRC OBIS code
-#   obis_status_register: Status register OBIS code
-#   obis_consumption_since_reset: Consumption since reset OBIS code
-#
-# Validation Constants:
-#   max_power_change: Maximum power change per reading (e.g., "3000.0")
-#   max_current_change: Maximum current change per reading (e.g., "13.0")
-#   max_energy_change: Maximum energy change per reading (e.g., "1.0")
-#   max_rolling_energy_change: Maximum energy change for rolling window sensors per reading (e.g., "2.0")
-#   max_energy_total: Maximum total energy value (e.g., "100000.0")
-#   max_absolute_power: Maximum absolute power value (e.g., "34500.0")
-#   min_energy_value: Minimum energy value (e.g., "0.0")
-#   min_power_value: Minimum power value (e.g., "0.0")
-#   max_voltage: Maximum voltage value (e.g., "280.0")
-#   min_voltage: Minimum voltage value (e.g., "0.0")
-#   max_current: Maximum current value (e.g., "30.0")
-#   min_current: Minimum current value (e.g., "0.0")
-#   max_frequency: Maximum frequency value (e.g., "52.0")
-#   min_frequency: Minimum frequency value (e.g., "48.0")
-#   max_phase_angle: Maximum phase angle value (e.g., "360.0")
-#   min_phase_angle: Minimum phase angle value (e.g., "-360.0")
-#
-# Rolling Window Maximum Values:
-#   max_consumption_1d: Maximum consumption for 1-day rolling window (e.g., "30.0")
-#   max_consumption_7d: Maximum consumption for 7-day rolling window (e.g., "210.0")
-#   max_consumption_30d: Maximum consumption for 30-day rolling window (e.g., "800.0")
-#   max_consumption_365d: Maximum consumption for 365-day rolling window (e.g., "10000.0")
+# The substitutions a main configuration must define are listed in
+# README-electricity-meter.md ("Required Substitutions").
 
-
+# Tunables with defaults; a main configuration overrides any of them by
+# defining the same substitution.
+substitutions:
+  # Line filter: shorter lines are noise, not OBIS readings
+  obis_min_line_length: "10"
+  # Identical text readings in a row before a text sensor publishes
+  text_sensor_confirmations: "3"
+  # Sensor publishing: at most one update per throttle period unless the
+  # value moved by at least the group's delta
+  meter_sensor_throttle: 5min
+  energy_sensor_delta: "0.001"  # kWh
+  power_sensor_delta: "0.5"  # W
+  voltage_sensor_delta: "0.05"  # V
+  current_sensor_delta: "0.005"  # A
+  frequency_sensor_delta: "0.05"  # Hz
+  phase_angle_sensor_delta: "0.5"  # degrees
+  # Communication quality sensors
+  quality_sensor_update_interval: 30s
+  quality_sensor_throttle: 2min
+  frame_rate_sensor_delta: "0.1"  # percentage points
+  uart_lines_sensor_delta: "0.5"  # lines
+  # ESP8266 heap sweep
+  heap_sweep_interval: 5min
+  heap_sweep_startup_delay: 2min
+  heap_sweep_block_margin: "32"  # bytes left free below the largest block
+  heap_sweep_min_free_to_start: "8192"  # bytes
+  heap_sweep_min_free_during: "6144"  # bytes
+  heap_sweep_max_fragmentation_percent: "80.0"
+  heap_sweep_max_block_divisor: "32"  # blocks of max/1, /2, /4 ... /this
+  heap_sweep_min_block: "256"  # bytes
 
 # UART for IR head communication
-# Note: This package requires a custom uart_line_reader component
-# Add this to your main configuration:
-# external_components:
-#   - source:
-#       type: local
-#       path: components
 uart:
   rx_pin: ${uart_rx_pin}
-  # rx_pin:
-  #   number: ${uart_rx_pin}
-  #   mode:
-  #     input: true
-  #     pullup: true
   baud_rate: ${uart_baud_rate}
   id: uart_bus
   parity: ${uart_parity}
@@ -126,6 +78,15 @@ globals:
     type: float
     initial_value: "-1.0"
   - id: prev_current_power
+    type: float
+    initial_value: "-1.0"
+  - id: prev_power_l1
+    type: float
+    initial_value: "-1.0"
+  - id: prev_power_l2
+    type: float
+    initial_value: "-1.0"
+  - id: prev_power_l3
     type: float
     initial_value: "-1.0"
   - id: prev_consumption_t1
@@ -176,36 +137,53 @@ globals:
   - id: status_register_count
     type: int
     initial_value: "0"
-  # Total raw lines seen by UART before any filter - distinguishes "no UART data"
-  # from "data filtered/rejected". Unlike total_frames_received (post-filter),
-  # this increments for every line the UART delivers, including invalid ones.
+  # While positioning mode is on: every line the reader delivers, counted
+  # before the line filter, plus the lines lost with each dropped SML
+  # telegram. Distinguishes "no data" from "data rejected by the filter";
+  # total_frames_received counts only lines that passed the filter, plus
+  # lost lines.
   - id: uart_lines_seen
     type: uint32_t
     initial_value: "0"
 
-# OBIS data parsing text sensor
+# OBIS data parsing text sensor: one line per state, from text meters and
+# SML meters alike
 text_sensor:
-  - platform: uart_line_reader
+  - platform: electricity_meter_reader
     uart_id: uart_bus
     name: "OBIS Raw Line"
     id: obis_raw_line
     internal: true
+    # A dropped SML telegram counts as the lines it would have carried, all
+    # corrupt, so the quality sensors and positioning mode see it.
+    on_telegram_dropped:
+      - lambda: |-
+          id(total_frames_received) += lines_lost;
+          id(corruption_count) += lines_lost;
+          // Stops at UINT32_MAX instead of wrapping, like the filter below.
+          if (id(positioning_mode).state) {
+            id(uart_lines_seen) =
+                UINT32_MAX - id(uart_lines_seen) < lines_lost
+                    ? UINT32_MAX
+                    : id(uart_lines_seen) + lines_lost;
+          }
     filters:
       - lambda: |-
-          // Count and log raw lines only while positioning mode is active.
-          // Counter is capped at UINT32_MAX-1 to prevent overflow.
+          constexpr size_t MIN_OBIS_LINE_LEN = ${obis_min_line_length};
+          // Characters of a raw line logged in positioning mode.
+          constexpr size_t RAW_LOG_MAX_CHARS = 64;
+          // Count and log every raw line (pre-filter) only while positioning
+          // mode is active. The counter stops at UINT32_MAX instead of
+          // wrapping.
           if (id(positioning_mode).state) {
-            if (id(uart_lines_seen) < 0xFFFFFFFEu) id(uart_lines_seen)++;
-          }
-          // Log every raw UART line when positioning mode is on (pre-filter)
-          if (id(positioning_mode).state) {
-            char raw_buf[65];
-            size_t raw_len = std::min(x.length(), size_t(64));
+            if (id(uart_lines_seen) < UINT32_MAX) id(uart_lines_seen)++;
+            char raw_buf[RAW_LOG_MAX_CHARS + 1];
+            size_t raw_len = std::min(x.length(), RAW_LOG_MAX_CHARS);
             memcpy(raw_buf, x.c_str(), raw_len);
             raw_buf[raw_len] = '\0';
             ESP_LOGI("meter_raw", "RAW: [%s]", raw_buf);
           }
-          if (x.length() < 10) return {};
+          if (x.length() < MIN_OBIS_LINE_LEN) return {};
           if (x[0] != '0' && x[0] != '1') return {};
           if (x.find('*') == std::string::npos ||
               x.find('(') == std::string::npos ||
@@ -214,8 +192,6 @@ text_sensor:
     on_value:
       then:
         - lambda: |-
-            #include <errno.h>
-            #include <string_view>
             // Track OBIS telegram processing for quality metrics
             id(total_frames_received)++;
 
@@ -226,8 +202,9 @@ text_sensor:
             const float MAX_POWER_CHANGE = ${max_power_change};
             const float MAX_CURRENT_CHANGE = ${max_current_change};
             const float MAX_ENERGY_CHANGE = ${max_energy_change};
-            const float MAX_ROLLING_ENERGY_CHANGE = ${max_rolling_energy_change};
-            
+            const float MAX_ROLLING_ENERGY_CHANGE =
+                ${max_rolling_energy_change};
+
             // Range validation constants
             const float MIN_ENERGY_VALUE = ${min_energy_value};
             const float MAX_ENERGY_TOTAL = ${max_energy_total};
@@ -245,77 +222,107 @@ text_sensor:
             const float MAX_FREQUENCY = ${max_frequency};
             const float MIN_PHASE_ANGLE = ${min_phase_angle};
             const float MAX_PHASE_ANGLE = ${max_phase_angle};
-            
+
             // Feature flags from substitutions (process if NOT disabled)
-            constexpr bool ENABLE_CORE_SENSORS = ("${disabled_core_sensors}"[0] != 't');
-            constexpr bool ENABLE_FEED_IN_SENSORS = ("${disabled_feed_in_sensors}"[0] != 't');
-            constexpr bool ENABLE_VOLTAGE_SENSORS = ("${disabled_voltage_sensors}"[0] != 't');
-            constexpr bool ENABLE_CURRENT_SENSORS = ("${disabled_current_sensors}"[0] != 't');
-            constexpr bool ENABLE_FREQUENCY_SENSORS = ("${disabled_frequency_sensors}"[0] != 't');
-            constexpr bool ENABLE_PHASE_ANGLE_SENSORS = ("${disabled_phase_angle_sensors}"[0] != 't');
-            constexpr bool ENABLE_TARIFF_SENSORS = ("${disabled_tariff_sensors}"[0] != 't');
-            constexpr bool ENABLE_CONSUMPTION_SINCE_RESET_SENSORS = ("${disabled_consumption_since_reset_sensors}"[0] != 't');
-            constexpr bool ENABLE_ROLLING_WINDOW_SENSORS = ("${disabled_rolling_window_sensors}"[0] != 't');
-            constexpr bool ENABLE_DIAGNOSTIC_SENSORS = ("${disabled_diagnostic_sensors}"[0] != 't');
-            constexpr bool ENABLE_QUALITY_SENSORS = ("${disabled_quality_sensors}"[0] != 't');
-            
-            // Helper to trim strings to 30 chars without allocation
-            // Uses thread-local storage for cross-platform safety (ESP8266/ESP32)
+            constexpr bool ENABLE_CORE_SENSORS =
+                ("${disabled_core_sensors}"[0] != 't');
+            constexpr bool ENABLE_FEED_IN_SENSORS =
+                ("${disabled_feed_in_sensors}"[0] != 't');
+            constexpr bool ENABLE_PHASE_POWER_SENSORS =
+                ("${disabled_phase_power_sensors}"[0] != 't');
+            constexpr bool ENABLE_VOLTAGE_SENSORS =
+                ("${disabled_voltage_sensors}"[0] != 't');
+            constexpr bool ENABLE_CURRENT_SENSORS =
+                ("${disabled_current_sensors}"[0] != 't');
+            constexpr bool ENABLE_FREQUENCY_SENSORS =
+                ("${disabled_frequency_sensors}"[0] != 't');
+            constexpr bool ENABLE_PHASE_ANGLE_SENSORS =
+                ("${disabled_phase_angle_sensors}"[0] != 't');
+            constexpr bool ENABLE_TARIFF_SENSORS =
+                ("${disabled_tariff_sensors}"[0] != 't');
+            constexpr bool ENABLE_CONSUMPTION_SINCE_RESET_SENSORS =
+                ("${disabled_consumption_since_reset_sensors}"[0] !=
+                 't');
+            constexpr bool ENABLE_ROLLING_WINDOW_SENSORS =
+                ("${disabled_rolling_window_sensors}"[0] != 't');
+            constexpr bool ENABLE_DIAGNOSTIC_SENSORS =
+                ("${disabled_diagnostic_sensors}"[0] != 't');
+
+            // Static, so the capture-less helpers below can use them.
+            // Characters of a field shown in a log line.
+            static constexpr size_t LOG_FIELD_MAX_CHARS = 30;
+            // Longest number text parse_float reads; longer text is cut.
+            static constexpr size_t NUMBER_MAX_CHARS = 31;
+            // FNV-1a 32-bit parameters.
+            static constexpr uint32_t FNV_OFFSET_BASIS = 2166136261U;
+            static constexpr uint32_t FNV_PRIME = 16777619U;
+            static constexpr int TEXT_CONFIRMATIONS =
+                ${text_sensor_confirmations};
+
+            // Helpers to trim text for a log line without allocation. Each
+            // has its own thread-local buffer, so one log call may use both,
+            // but not the same one twice.
             auto trim_for_log = [](const std::string &str) -> const char* {
-              thread_local char buf[31];  // Thread-local storage - safe on both platforms
-              size_t len = std::min(str.length(), size_t(30));
+              thread_local char buf[LOG_FIELD_MAX_CHARS + 1];
+              size_t len = std::min(str.length(), LOG_FIELD_MAX_CHARS);
               memcpy(buf, str.c_str(), len);
               buf[len] = '\0';
               return buf;
             };
 
-            // Helper to trim string_view to 30 chars without allocation
-            auto trim_sv_for_log = [](std::string_view sv) -> const char* {
-              thread_local char buf[31];  // Thread-local storage - safe on both ESP8266 and ESP32 platforms
-              size_t len = std::min(sv.length(), size_t(30));
-              memcpy(buf, sv.data(), len);
+            auto trim_sv_for_log = [](std::string_view text) -> const char* {
+              thread_local char buf[LOG_FIELD_MAX_CHARS + 1];
+              size_t len = std::min(text.length(), LOG_FIELD_MAX_CHARS);
+              memcpy(buf, text.data(), len);
               buf[len] = '\0';
               return buf;
             };
-            
-            // Helper macro for conditional warning logging - zero overhead when disabled
+
+            // Helper macro for conditional warning logging - zero overhead when
+            // disabled
             #define LOG_WARNING_IF_ENABLED(format, ...) \
               do { \
                 if (id(enable_warning_logs).state) { \
                   ESP_LOGW("meter", format, ##__VA_ARGS__); \
                 } \
               } while(0)
-            
-            // Lightweight helper: parse float from a std::string_view without heap allocations
-            auto parse_float = [](std::string_view sv) -> float {
-              if (sv.empty()) return NAN;
-              char buf[32];
-              size_t len = std::min(sv.size(), sizeof(buf) - 1);
-              memcpy(buf, sv.data(), len);
+
+            // Lightweight helper: parse float from a std::string_view without
+            // heap allocations
+            auto parse_float = [](std::string_view text) -> float {
+              if (text.empty()) return NAN;
+              char buf[NUMBER_MAX_CHARS + 1];
+              size_t len = std::min(text.size(), NUMBER_MAX_CHARS);
+              memcpy(buf, text.data(), len);
               buf[len] = '\0';
 
               char *endptr = nullptr;
               errno = 0;  // Clear errno before strtof
               float val = strtof(buf, &endptr);
-              // Check for parsing errors: no characters processed, extra junk, or errno set
+              // Check for parsing errors: no characters processed, extra junk,
+              // or errno set
               if (endptr == buf || *endptr != '\0' || errno != 0) {
                 return NAN;
               }
               return val;
             };
 
-            // FNV-1a hash function for string_view - memory-efficient duplicate detection
-            auto calculate_hash = [](std::string_view sv) -> uint32_t {
-              uint32_t hash = 2166136261U;  // FNV-1a 32-bit offset basis
-              for (char c : sv) {
-                hash ^= static_cast<uint32_t>(c);
-                hash *= 16777619U;  // FNV-1a 32-bit prime
+            // FNV-1a hash: memory-efficient duplicate detection at run time,
+            // and the OBIS code switch below at compile time
+            constexpr auto calculate_hash =
+                [](std::string_view text) constexpr -> uint32_t {
+              uint32_t hash = FNV_OFFSET_BASIS;
+              for (char character : text) {
+                hash ^= static_cast<uint32_t>(character);
+                hash *= FNV_PRIME;
               }
               return hash;
             };
 
-            // Extract OBIS code from the current line - returns string_view for efficiency
-            auto extract_obis_code = [&](const std::string &line) -> std::string_view {
+            // Extract OBIS code from the current line - returns string_view for
+            // efficiency
+            auto extract_obis_code =
+                [&](const std::string &line) -> std::string_view {
               // Find the first '(' character
               size_t start = line.find('(');
               if (start == std::string::npos) {
@@ -323,24 +330,30 @@ text_sensor:
                 telegram_corrupted = true;
                 return {};
               }
-              
+
               // OBIS code is everything before the first '('
-              std::string_view obis_code = std::string_view(line).substr(0, start);
-              
-              // Trim any whitespace - following same pattern as parse_obis_string_value
+              std::string_view obis_code =
+                  std::string_view(line).substr(0, start);
+
+              // Trim any whitespace - following same pattern as
+              // parse_obis_string_value
               size_t first_non_space = obis_code.find_first_not_of(" \t\r\n");
               if (first_non_space == std::string::npos) {
                 LOG_WARNING_IF_ENABLED("Only whitespace before '('");
                 telegram_corrupted = true;
                 return {};
               }
-              
+
               size_t last_non_space = obis_code.find_last_not_of(" \t\r\n");
-              return obis_code.substr(first_non_space, last_non_space - first_non_space + 1);
+              return obis_code.substr(first_non_space,
+                                      last_non_space - first_non_space + 1);
             };
 
-            // Parse OBIS string value from line, returned as string_view to avoid allocations
-            auto parse_obis_string_value = [&](const std::string &line, const std::string &obis, char delimiter) -> std::string_view {
+            // Parse OBIS string value from line, returned as string_view to
+            // avoid allocations
+            auto parse_obis_string_value =
+                [&](const std::string &line, const std::string &obis,
+                    char delimiter) -> std::string_view {
               size_t pos = line.find(obis);
               if (pos == std::string::npos) {
                 return {};
@@ -355,7 +368,8 @@ text_sensor:
 
               size_t end = line.find(delimiter, start);
               if (end == std::string::npos || end <= start) {
-                LOG_WARNING_IF_ENABLED("No '%c' for %s", delimiter, trim_for_log(obis));
+                LOG_WARNING_IF_ENABLED("No '%c' for %s", delimiter,
+                                       trim_for_log(obis));
                 telegram_corrupted = true;
                 return {};
               }
@@ -363,61 +377,79 @@ text_sensor:
               return std::string_view(line).substr(start + 1, end - start - 1);
             };
 
-            // Parse OBIS numeric value from line, return NAN if not found or invalid
-            auto parse_obis_value = [&](const std::string &line, const std::string &obis) -> float {
-              std::string_view value_sv = parse_obis_string_value(line, obis, '*');
+            // Parse OBIS numeric value from line, return NAN if not found or
+            // invalid
+            auto parse_obis_value = [&](const std::string &line,
+                                        const std::string &obis) -> float {
+              std::string_view value_sv =
+                  parse_obis_string_value(line, obis, '*');
               if (value_sv.empty()) {
                 return NAN;
               }
 
               float value = parse_float(value_sv);
               if (isnan(value)) {
-                LOG_WARNING_IF_ENABLED("Bad float %s: %s", trim_for_log(obis), trim_sv_for_log(value_sv));
+                LOG_WARNING_IF_ENABLED("Bad float %s: %s", trim_for_log(obis),
+                                       trim_sv_for_log(value_sv));
                 telegram_corrupted = true;
               }
               return value;
             };
 
             // Validate and update monotonic energy sensors (kWh)
-            auto update_energy_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, float &prev_value, float min_range, float max_range) {
+            auto update_energy_sensor = [&](const std::string &line,
+                                            const std::string &obis,
+                                            auto &sensor, float &prev_value,
+                                            float min_range, float max_range) {
               float value = parse_obis_value(line, obis);
               if (isnan(value)) {
                 return;
               }
-              
+
               // Validate: energy must be in valid range
               if (value < min_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.1f", trim_for_log(obis), value, min_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.1f",
+                                       trim_for_log(obis), value, min_range);
                 telegram_corrupted = true;
                 return;
               }
               if (value > max_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.2f>%.1f", trim_for_log(obis), value, max_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.2f>%.1f",
+                                       trim_for_log(obis), value, max_range);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               // Validate: energy must be evergrowing (or first reading)
               if (prev_value >= 0 && value < prev_value) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.2f", trim_for_log(obis), value, prev_value);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.2f",
+                                       trim_for_log(obis), value, prev_value);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               // Validate: energy change must be reasonable
               if (prev_value >= 0 && (value - prev_value) > MAX_ENERGY_CHANGE) {
-                LOG_WARNING_IF_ENABLED("Reject %s: Δ%.2f>%.0f", trim_for_log(obis), value - prev_value, MAX_ENERGY_CHANGE);
+                LOG_WARNING_IF_ENABLED("Reject %s: Δ%.2f>%.0f",
+                                       trim_for_log(obis), value - prev_value,
+                                       MAX_ENERGY_CHANGE);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               sensor->publish_state(value);
               prev_value = value;
-              ESP_LOGD("meter", "Updated %s: %.4f kWh", trim_for_log(obis), value);
+              ESP_LOGD("meter", "Updated %s: %.4f kWh", trim_for_log(obis),
+                       value);
             };
 
             // Validate and update rolling-window energy sensors (kWh)
-            auto update_rolling_energy_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, float &prev_value, float min_range, float max_range) {
+            auto update_rolling_energy_sensor = [&](const std::string &line,
+                                                    const std::string &obis,
+                                                    auto &sensor,
+                                                    float &prev_value,
+                                                    float min_range,
+                                                    float max_range) {
               float value = parse_obis_value(line, obis);
               if (isnan(value)) {
                 return;
@@ -425,234 +457,316 @@ text_sensor:
 
               // Validate: energy must be in valid range
               if (value < min_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.1f", trim_for_log(obis), value, min_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.2f<%.1f",
+                                       trim_for_log(obis), value, min_range);
                 telegram_corrupted = true;
                 return;
               }
               if (value > max_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.2f>%.1f", trim_for_log(obis), value, max_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.2f>%.1f",
+                                       trim_for_log(obis), value, max_range);
                 telegram_corrupted = true;
                 return;
               }
 
-              // Validate: change magnitude must be reasonable (allow increase OR decrease)
-              if (prev_value >= 0 && fabs(value - prev_value) > MAX_ROLLING_ENERGY_CHANGE) {
-                LOG_WARNING_IF_ENABLED("Reject %s: |Δ|%.2f>%.0f", trim_for_log(obis), fabs(value - prev_value), MAX_ROLLING_ENERGY_CHANGE);
+              // Validate: change magnitude must be reasonable (allow increase
+              // OR decrease)
+              if (prev_value >= 0 &&
+                  fabs(value - prev_value) > MAX_ROLLING_ENERGY_CHANGE) {
+                LOG_WARNING_IF_ENABLED(
+                    "Reject %s: |Δ|%.2f>%.0f", trim_for_log(obis),
+                    fabs(value - prev_value), MAX_ROLLING_ENERGY_CHANGE);
                 telegram_corrupted = true;
                 return;
               }
 
               sensor->publish_state(value);
               prev_value = value;
-              ESP_LOGD("meter", "Updated (rolling) %s: %.4f kWh", trim_for_log(obis), value);
+              ESP_LOGD("meter", "Updated (rolling) %s: %.4f kWh",
+                       trim_for_log(obis), value);
             };
 
-            // Generic function to validate and update sensors with spike protection
-            auto update_spike_protected_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, float &prev_value, 
-                                                     float max_change, const char* unit, float min_range, float max_range) {
+            // Generic function to validate and update sensors with spike
+            // protection
+            auto update_spike_protected_sensor = [&](const std::string &line,
+                                                     const std::string &obis,
+                                                     auto &sensor,
+                                                     float &prev_value,
+                                                     float max_change,
+                                                     const char *unit,
+                                                     float min_range,
+                                                     float max_range) {
               float value = parse_obis_value(line, obis);
               if (isnan(value)) {
                 return;
               }
-              
+
               // Validate: value must be in valid range
               if (value < min_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.1f<%.1f", trim_for_log(obis), value, min_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.1f<%.1f",
+                                       trim_for_log(obis), value, min_range);
                 telegram_corrupted = true;
                 return;
               }
               if (value > max_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.1f>%.1f", trim_for_log(obis), value, max_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.1f>%.1f",
+                                       trim_for_log(obis), value, max_range);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               // Validate: change must be reasonable (or first reading)
               if (prev_value >= 0 && fabs(value - prev_value) > max_change) {
-                LOG_WARNING_IF_ENABLED("Reject %s: Δ%.1f>%.0f%s", 
-                         trim_for_log(obis), fabs(value - prev_value), max_change, unit);
+                LOG_WARNING_IF_ENABLED(
+                    "Reject %s: Δ%.1f>%.0f%s", trim_for_log(obis),
+                    fabs(value - prev_value), max_change, unit);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               sensor->publish_state(value);
               prev_value = value;
-              ESP_LOGD("meter", "Updated %s: %g %s", trim_for_log(obis), value, unit);
+              ESP_LOGD("meter", "Updated %s: %g %s", trim_for_log(obis), value,
+                       unit);
             };
 
             // Convenience wrappers for specific sensor types
-            auto update_power_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, float &prev_value) {
-              update_spike_protected_sensor(line, obis, sensor, prev_value, MAX_POWER_CHANGE, "W", MIN_POWER_VALUE, MAX_ABSOLUTE_POWER);
+            auto update_power_sensor = [&](const std::string &line,
+                                           const std::string &obis,
+                                           auto &sensor, float &prev_value) {
+              update_spike_protected_sensor(
+                  line, obis, sensor, prev_value, MAX_POWER_CHANGE, "W",
+                  MIN_POWER_VALUE, MAX_ABSOLUTE_POWER);
             };
 
-            auto update_current_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, float &prev_value) {
-              update_spike_protected_sensor(line, obis, sensor, prev_value, MAX_CURRENT_CHANGE, "A", MIN_CURRENT, MAX_CURRENT);
+            auto update_current_sensor = [&](const std::string &line,
+                                             const std::string &obis,
+                                             auto &sensor, float &prev_value) {
+              update_spike_protected_sensor(line, obis, sensor, prev_value,
+                                            MAX_CURRENT_CHANGE, "A",
+                                            MIN_CURRENT, MAX_CURRENT);
             };
 
             // Generic function to update numeric sensors with range validation
-            auto update_numeric_sensor = [&](const std::string &line, const std::string &obis, auto &sensor, const char* unit, float min_range, float max_range) {
+            auto update_numeric_sensor = [&](const std::string &line,
+                                             const std::string &obis,
+                                             auto &sensor, const char *unit,
+                                             float min_range, float max_range) {
               float value = parse_obis_value(line, obis);
               if (isnan(value)) {
                 return;
               }
-              
+
               // Validate: value must be in valid range
               if (value < min_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.1f<%.1f", trim_for_log(obis), value, min_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.1f<%.1f",
+                                       trim_for_log(obis), value, min_range);
                 telegram_corrupted = true;
                 return;
               }
               if (value > max_range) {
-                LOG_WARNING_IF_ENABLED("Reject %s: %.1f>%.1f", trim_for_log(obis), value, max_range);
+                LOG_WARNING_IF_ENABLED("Reject %s: %.1f>%.1f",
+                                       trim_for_log(obis), value, max_range);
                 telegram_corrupted = true;
                 return;
               }
-              
+
               sensor->publish_state(value);
-              ESP_LOGD("meter", "Updated %s: %.3f %s", trim_for_log(obis), value, unit);
+              ESP_LOGD("meter", "Updated %s: %.3f %s", trim_for_log(obis),
+                       value, unit);
             };
 
-            // Parse and publish text sensor values with corruption filtering - hash-based for memory efficiency
-            auto update_text_sensor_filtered = [&](const std::string &line, const std::string &obis, auto &sensor, uint32_t &last_hash, int &count) {
-              std::string_view value_sv = parse_obis_string_value(line, obis, ')');
-              if (value_sv.empty()) {
-                return;
-              }
+            // Parse and publish text sensor values with corruption filtering -
+            // hash-based for memory efficiency
+            auto update_text_sensor_filtered =
+                [&](const std::string &line, const std::string &obis,
+                    auto &sensor, uint32_t &last_hash, int &count) {
+                  std::string_view value_sv =
+                      parse_obis_string_value(line, obis, ')');
+                  if (value_sv.empty()) {
+                    return;
+                  }
 
-              uint32_t current_hash = calculate_hash(value_sv);
-              
-              if (current_hash != last_hash) {
-                last_hash = current_hash;
-                count = 1;
-                ESP_LOGD("meter", "New %s: %s (1/3)", trim_for_log(obis), trim_sv_for_log(value_sv));
-                return;
-              }
-              
-              if (count < 3) {
-                count++;
-              }
-              
-              if (count < 3) {
-                ESP_LOGD("meter", "Buf %s: %s (%d/3)", trim_for_log(obis), trim_sv_for_log(value_sv), count);
-                return;
-              }
-              
-              // Only allocate string when we're ready to publish (3 consecutive identical values)
-              std::string value_str(value_sv);
-              sensor->publish_state(value_str);
-              ESP_LOGD("meter", "Updated %s: %s (3x)", trim_for_log(obis), trim_for_log(value_str));
-            };
+                  uint32_t current_hash = calculate_hash(value_sv);
 
-            // Compile-time hash function for string literals - enables switch on strings
-            constexpr auto compile_time_hash = [](const char* str) constexpr -> uint32_t {
-              uint32_t hash = 2166136261U;  // FNV-1a 32-bit offset basis
-              while (*str) {
-                hash ^= static_cast<uint32_t>(*str++);
-                hash *= 16777619U;  // FNV-1a 32-bit prime
-              }
-              return hash;
-            };
+                  // A new value counts as its first reading.
+                  if (current_hash != last_hash) {
+                    last_hash = current_hash;
+                    count = 1;
+                  } else if (count < TEXT_CONFIRMATIONS) {
+                    count++;
+                  }
+
+                  if (count < TEXT_CONFIRMATIONS) {
+                    ESP_LOGD("meter", "Buf %s: %s (%d/%d)", trim_for_log(obis),
+                             trim_sv_for_log(value_sv), count,
+                             TEXT_CONFIRMATIONS);
+                    return;
+                  }
+
+                  // Only allocate string when we're ready to publish
+                  std::string value_str(value_sv);
+                  sensor->publish_state(value_str);
+                  ESP_LOGD("meter", "Updated %s: %s (%dx)", trim_for_log(obis),
+                           trim_sv_for_log(value_str), TEXT_CONFIRMATIONS);
+                };
 
             // Calculate hash values for all OBIS codes at compile time
-            constexpr uint32_t HASH_TOTAL_CONSUMPTION = compile_time_hash("${obis_total_consumption}");
-            constexpr uint32_t HASH_TOTAL_FEED_IN = compile_time_hash("${obis_total_feed_in}");
-            constexpr uint32_t HASH_CONSUMPTION_1D = compile_time_hash("${obis_consumption_1d}");
-            constexpr uint32_t HASH_CONSUMPTION_7D = compile_time_hash("${obis_consumption_7d}");
-            constexpr uint32_t HASH_CONSUMPTION_30D = compile_time_hash("${obis_consumption_30d}");
-            constexpr uint32_t HASH_CONSUMPTION_365D = compile_time_hash("${obis_consumption_365d}");
-            constexpr uint32_t HASH_CONSUMPTION_T1 = compile_time_hash("${obis_consumption_t1}");
-            constexpr uint32_t HASH_CONSUMPTION_T2 = compile_time_hash("${obis_consumption_t2}");
-            constexpr uint32_t HASH_CONSUMPTION_SINCE_RESET = compile_time_hash("${obis_consumption_since_reset}");
-            constexpr uint32_t HASH_CURRENT_POWER = compile_time_hash("${obis_current_power}");
-            constexpr uint32_t HASH_VOLTAGE_L1 = compile_time_hash("${obis_voltage_l1}");
-            constexpr uint32_t HASH_VOLTAGE_L2 = compile_time_hash("${obis_voltage_l2}");
-            constexpr uint32_t HASH_VOLTAGE_L3 = compile_time_hash("${obis_voltage_l3}");
-            constexpr uint32_t HASH_CURRENT_L1 = compile_time_hash("${obis_current_l1}");
-            constexpr uint32_t HASH_CURRENT_L2 = compile_time_hash("${obis_current_l2}");
-            constexpr uint32_t HASH_CURRENT_L3 = compile_time_hash("${obis_current_l3}");
-            constexpr uint32_t HASH_FREQUENCY = compile_time_hash("${obis_frequency}");
-            constexpr uint32_t HASH_PHASE_ANGLE_UL2_UL1 = compile_time_hash("${obis_phase_angle_ul2_ul1}");
-            constexpr uint32_t HASH_PHASE_ANGLE_UL3_UL1 = compile_time_hash("${obis_phase_angle_ul3_ul1}");
-            constexpr uint32_t HASH_PHASE_ANGLE_IL1_UL1 = compile_time_hash("${obis_phase_angle_il1_ul1}");
-            constexpr uint32_t HASH_PHASE_ANGLE_IL2_UL2 = compile_time_hash("${obis_phase_angle_il2_ul2}");
-            constexpr uint32_t HASH_PHASE_ANGLE_IL3_UL3 = compile_time_hash("${obis_phase_angle_il3_ul3}");
-            constexpr uint32_t HASH_SERIAL_NUMBER = compile_time_hash("${obis_serial_number}");
-            constexpr uint32_t HASH_FIRMWARE_VERSION = compile_time_hash("${obis_firmware_version}");
-            constexpr uint32_t HASH_PARAMETER_CRC = compile_time_hash("${obis_parameter_crc}");
-            constexpr uint32_t HASH_STATUS_REGISTER = compile_time_hash("${obis_status_register}");
+            constexpr uint32_t HASH_TOTAL_CONSUMPTION =
+                calculate_hash("${obis_total_consumption}");
+            constexpr uint32_t HASH_TOTAL_FEED_IN =
+                calculate_hash("${obis_total_feed_in}");
+            constexpr uint32_t HASH_CONSUMPTION_1D =
+                calculate_hash("${obis_consumption_1d}");
+            constexpr uint32_t HASH_CONSUMPTION_7D =
+                calculate_hash("${obis_consumption_7d}");
+            constexpr uint32_t HASH_CONSUMPTION_30D =
+                calculate_hash("${obis_consumption_30d}");
+            constexpr uint32_t HASH_CONSUMPTION_365D =
+                calculate_hash("${obis_consumption_365d}");
+            constexpr uint32_t HASH_CONSUMPTION_T1 =
+                calculate_hash("${obis_consumption_t1}");
+            constexpr uint32_t HASH_CONSUMPTION_T2 =
+                calculate_hash("${obis_consumption_t2}");
+            constexpr uint32_t HASH_CONSUMPTION_SINCE_RESET =
+                calculate_hash("${obis_consumption_since_reset}");
+            constexpr uint32_t HASH_CURRENT_POWER =
+                calculate_hash("${obis_current_power}");
+            constexpr uint32_t HASH_POWER_L1 =
+                calculate_hash("${obis_power_l1}");
+            constexpr uint32_t HASH_POWER_L2 =
+                calculate_hash("${obis_power_l2}");
+            constexpr uint32_t HASH_POWER_L3 =
+                calculate_hash("${obis_power_l3}");
+            constexpr uint32_t HASH_VOLTAGE_L1 =
+                calculate_hash("${obis_voltage_l1}");
+            constexpr uint32_t HASH_VOLTAGE_L2 =
+                calculate_hash("${obis_voltage_l2}");
+            constexpr uint32_t HASH_VOLTAGE_L3 =
+                calculate_hash("${obis_voltage_l3}");
+            constexpr uint32_t HASH_CURRENT_L1 =
+                calculate_hash("${obis_current_l1}");
+            constexpr uint32_t HASH_CURRENT_L2 =
+                calculate_hash("${obis_current_l2}");
+            constexpr uint32_t HASH_CURRENT_L3 =
+                calculate_hash("${obis_current_l3}");
+            constexpr uint32_t HASH_FREQUENCY =
+                calculate_hash("${obis_frequency}");
+            constexpr uint32_t HASH_PHASE_ANGLE_UL2_UL1 =
+                calculate_hash("${obis_phase_angle_ul2_ul1}");
+            constexpr uint32_t HASH_PHASE_ANGLE_UL3_UL1 =
+                calculate_hash("${obis_phase_angle_ul3_ul1}");
+            constexpr uint32_t HASH_PHASE_ANGLE_IL1_UL1 =
+                calculate_hash("${obis_phase_angle_il1_ul1}");
+            constexpr uint32_t HASH_PHASE_ANGLE_IL2_UL2 =
+                calculate_hash("${obis_phase_angle_il2_ul2}");
+            constexpr uint32_t HASH_PHASE_ANGLE_IL3_UL3 =
+                calculate_hash("${obis_phase_angle_il3_ul3}");
+            constexpr uint32_t HASH_SERIAL_NUMBER =
+                calculate_hash("${obis_serial_number}");
+            constexpr uint32_t HASH_FIRMWARE_VERSION =
+                calculate_hash("${obis_firmware_version}");
+            constexpr uint32_t HASH_PARAMETER_CRC =
+                calculate_hash("${obis_parameter_crc}");
+            constexpr uint32_t HASH_STATUS_REGISTER =
+                calculate_hash("${obis_status_register}");
 
             // Extract OBIS code from the current line
             std::string_view current_obis = extract_obis_code(x);
-            
-            // Feed the software watchdog so long bursts of UART data don't trigger a reset
-            App.feed_wdt();
 
             // Process only if we have a valid OBIS code
             if (!current_obis.empty()) {
-              ESP_LOGD("meter", "Processing OBIS: %s", trim_sv_for_log(current_obis));
-              
+              ESP_LOGD("meter", "Processing OBIS: %s",
+                       trim_sv_for_log(current_obis));
+
               // Calculate hash of current OBIS code for efficient switch
               uint32_t obis_hash = calculate_hash(current_obis);
-              
-              // Convert string_view to string only when we have a match (more efficient)
+
+              // Convert string_view to string only when we have a match (more
+              // efficient)
               std::string obis_str(current_obis);
-              
-              // Process the line based on the identified OBIS code using hash-based switch
+
+              // Process the line based on the identified OBIS code using
+              // hash-based switch
               switch (obis_hash) {
                 case HASH_TOTAL_CONSUMPTION:
                   if (ENABLE_CORE_SENSORS) {
-                    update_energy_sensor(x, obis_str, id(total_consumption), id(prev_total_consumption), MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
+                    update_energy_sensor(x, obis_str, id(total_consumption),
+                                         id(prev_total_consumption),
+                                         MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
                   }
                   break;
                 case HASH_TOTAL_FEED_IN:
                   if (ENABLE_FEED_IN_SENSORS) {
-                    update_energy_sensor(x, obis_str, id(total_feed_in), id(prev_total_feed_in), MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
+                    update_energy_sensor(x, obis_str, id(total_feed_in),
+                                         id(prev_total_feed_in),
+                                         MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
                   }
                   break;
                 case HASH_CONSUMPTION_1D:
                   if (ENABLE_ROLLING_WINDOW_SENSORS) {
-                    update_rolling_energy_sensor(x, obis_str, id(consumption_1d), id(prev_consumption_1d), MIN_ENERGY_VALUE, MAX_CONSUMPTION_1D);
+                    update_rolling_energy_sensor(
+                        x, obis_str, id(consumption_1d),
+                        id(prev_consumption_1d), MIN_ENERGY_VALUE,
+                        MAX_CONSUMPTION_1D);
                   }
                   break;
                 case HASH_CONSUMPTION_7D:
                   if (ENABLE_ROLLING_WINDOW_SENSORS) {
-                    update_rolling_energy_sensor(x, obis_str, id(consumption_7d), id(prev_consumption_7d), MIN_ENERGY_VALUE, MAX_CONSUMPTION_7D);
+                    update_rolling_energy_sensor(
+                        x, obis_str, id(consumption_7d),
+                        id(prev_consumption_7d), MIN_ENERGY_VALUE,
+                        MAX_CONSUMPTION_7D);
                   }
                   break;
                 case HASH_CONSUMPTION_30D:
                   if (ENABLE_ROLLING_WINDOW_SENSORS) {
-                    update_rolling_energy_sensor(x, obis_str, id(consumption_30d), id(prev_consumption_30d), MIN_ENERGY_VALUE, MAX_CONSUMPTION_30D);
+                    update_rolling_energy_sensor(
+                        x, obis_str, id(consumption_30d),
+                        id(prev_consumption_30d), MIN_ENERGY_VALUE,
+                        MAX_CONSUMPTION_30D);
                   }
                   break;
                 case HASH_CONSUMPTION_365D:
                   if (ENABLE_ROLLING_WINDOW_SENSORS) {
-                    update_rolling_energy_sensor(x, obis_str, id(consumption_365d), id(prev_consumption_365d), MIN_ENERGY_VALUE, MAX_CONSUMPTION_365D);
+                    update_rolling_energy_sensor(
+                        x, obis_str, id(consumption_365d),
+                        id(prev_consumption_365d), MIN_ENERGY_VALUE,
+                        MAX_CONSUMPTION_365D);
                   }
                   break;
                 case HASH_CONSUMPTION_T1:
                   if (ENABLE_TARIFF_SENSORS) {
-                    update_energy_sensor(x, obis_str, id(consumption_t1), id(prev_consumption_t1), MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
+                    update_energy_sensor(x, obis_str, id(consumption_t1),
+                                         id(prev_consumption_t1),
+                                         MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
                   }
                   break;
                 case HASH_CONSUMPTION_T2:
                   if (ENABLE_TARIFF_SENSORS) {
-                    update_energy_sensor(x, obis_str, id(consumption_t2), id(prev_consumption_t2), MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
+                    update_energy_sensor(x, obis_str, id(consumption_t2),
+                                         id(prev_consumption_t2),
+                                         MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
                   }
                   break;
                 case HASH_CONSUMPTION_SINCE_RESET:
                   if (ENABLE_CONSUMPTION_SINCE_RESET_SENSORS) {
-                    update_energy_sensor(x, obis_str, id(consumption_since_reset), id(prev_consumption_since_reset), MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
+                    update_energy_sensor(x, obis_str,
+                                         id(consumption_since_reset),
+                                         id(prev_consumption_since_reset),
+                                         MIN_ENERGY_VALUE, MAX_ENERGY_TOTAL);
                   }
                   break;
                 case HASH_CURRENT_POWER:
                   if (id(positioning_mode).state) {
-                    std::string_view rsv = parse_obis_string_value(
+                    std::string_view raw_text = parse_obis_string_value(
                         x, obis_str, '*');
-                    if (!rsv.empty()) {
-                      float rv = parse_float(rsv);
-                      if (!isnan(rv)) {
-                        id(raw_current_power)->publish_state(rv);
-                        ESP_LOGI("meter", "[positioning] Power: %.0f W", rv);
+                    if (!raw_text.empty()) {
+                      float raw_value = parse_float(raw_text);
+                      if (!isnan(raw_value)) {
+                        id(raw_current_power)->publish_state(raw_value);
+                        ESP_LOGI("meter", "[positioning] Power: %.0f W",
+                                 raw_value);
                       }
                     }
                   }
@@ -662,29 +776,50 @@ text_sensor:
                         id(prev_current_power));
                   }
                   break;
+                case HASH_POWER_L1:
+                  if (ENABLE_PHASE_POWER_SENSORS) {
+                    update_power_sensor(x, obis_str, id(power_l1),
+                                        id(prev_power_l1));
+                  }
+                  break;
+                case HASH_POWER_L2:
+                  if (ENABLE_PHASE_POWER_SENSORS) {
+                    update_power_sensor(x, obis_str, id(power_l2),
+                                        id(prev_power_l2));
+                  }
+                  break;
+                case HASH_POWER_L3:
+                  if (ENABLE_PHASE_POWER_SENSORS) {
+                    update_power_sensor(x, obis_str, id(power_l3),
+                                        id(prev_power_l3));
+                  }
+                  break;
                 case HASH_VOLTAGE_L1:
                   if (ENABLE_VOLTAGE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(voltage_l1), "V", MIN_VOLTAGE, MAX_VOLTAGE);
+                    update_numeric_sensor(x, obis_str, id(voltage_l1), "V",
+                                          MIN_VOLTAGE, MAX_VOLTAGE);
                   }
                   break;
                 case HASH_VOLTAGE_L2:
                   if (ENABLE_VOLTAGE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(voltage_l2), "V", MIN_VOLTAGE, MAX_VOLTAGE);
+                    update_numeric_sensor(x, obis_str, id(voltage_l2), "V",
+                                          MIN_VOLTAGE, MAX_VOLTAGE);
                   }
                   break;
                 case HASH_VOLTAGE_L3:
                   if (ENABLE_VOLTAGE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(voltage_l3), "V", MIN_VOLTAGE, MAX_VOLTAGE);
+                    update_numeric_sensor(x, obis_str, id(voltage_l3), "V",
+                                          MIN_VOLTAGE, MAX_VOLTAGE);
                   }
                   break;
                 case HASH_CURRENT_L1:
                   if (id(positioning_mode).state) {
-                    std::string_view rsv = parse_obis_string_value(
+                    std::string_view raw_text = parse_obis_string_value(
                         x, obis_str, '*');
-                    if (!rsv.empty()) {
-                      float rv = parse_float(rsv);
-                      if (!isnan(rv))
-                        id(raw_current_l1)->publish_state(rv);
+                    if (!raw_text.empty()) {
+                      float raw_value = parse_float(raw_text);
+                      if (!isnan(raw_value))
+                        id(raw_current_l1)->publish_state(raw_value);
                     }
                   }
                   if (ENABLE_CURRENT_SENSORS) {
@@ -695,12 +830,12 @@ text_sensor:
                   break;
                 case HASH_CURRENT_L2:
                   if (id(positioning_mode).state) {
-                    std::string_view rsv = parse_obis_string_value(
+                    std::string_view raw_text = parse_obis_string_value(
                         x, obis_str, '*');
-                    if (!rsv.empty()) {
-                      float rv = parse_float(rsv);
-                      if (!isnan(rv))
-                        id(raw_current_l2)->publish_state(rv);
+                    if (!raw_text.empty()) {
+                      float raw_value = parse_float(raw_text);
+                      if (!isnan(raw_value))
+                        id(raw_current_l2)->publish_state(raw_value);
                     }
                   }
                   if (ENABLE_CURRENT_SENSORS) {
@@ -711,12 +846,12 @@ text_sensor:
                   break;
                 case HASH_CURRENT_L3:
                   if (id(positioning_mode).state) {
-                    std::string_view rsv = parse_obis_string_value(
+                    std::string_view raw_text = parse_obis_string_value(
                         x, obis_str, '*');
-                    if (!rsv.empty()) {
-                      float rv = parse_float(rsv);
-                      if (!isnan(rv))
-                        id(raw_current_l3)->publish_state(rv);
+                    if (!raw_text.empty()) {
+                      float raw_value = parse_float(raw_text);
+                      if (!isnan(raw_value))
+                        id(raw_current_l3)->publish_state(raw_value);
                     }
                   }
                   if (ENABLE_CURRENT_SENSORS) {
@@ -727,64 +862,90 @@ text_sensor:
                   break;
                 case HASH_FREQUENCY:
                   if (ENABLE_FREQUENCY_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(frequency), "Hz", MIN_FREQUENCY, MAX_FREQUENCY);
+                    update_numeric_sensor(x, obis_str, id(frequency), "Hz",
+                                          MIN_FREQUENCY, MAX_FREQUENCY);
                   }
                   break;
                 case HASH_PHASE_ANGLE_UL2_UL1:
                   if (ENABLE_PHASE_ANGLE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(phase_angle_ul2_ul1), "deg", MIN_PHASE_ANGLE, MAX_PHASE_ANGLE);
+                    update_numeric_sensor(x, obis_str, id(phase_angle_ul2_ul1),
+                                          "deg", MIN_PHASE_ANGLE,
+                                          MAX_PHASE_ANGLE);
                   }
                   break;
                 case HASH_PHASE_ANGLE_UL3_UL1:
                   if (ENABLE_PHASE_ANGLE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(phase_angle_ul3_ul1), "deg", MIN_PHASE_ANGLE, MAX_PHASE_ANGLE);
+                    update_numeric_sensor(x, obis_str, id(phase_angle_ul3_ul1),
+                                          "deg", MIN_PHASE_ANGLE,
+                                          MAX_PHASE_ANGLE);
                   }
                   break;
                 case HASH_PHASE_ANGLE_IL1_UL1:
                   if (ENABLE_PHASE_ANGLE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(phase_angle_il1_ul1), "deg", MIN_PHASE_ANGLE, MAX_PHASE_ANGLE);
+                    update_numeric_sensor(x, obis_str, id(phase_angle_il1_ul1),
+                                          "deg", MIN_PHASE_ANGLE,
+                                          MAX_PHASE_ANGLE);
                   }
                   break;
                 case HASH_PHASE_ANGLE_IL2_UL2:
                   if (ENABLE_PHASE_ANGLE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(phase_angle_il2_ul2), "deg", MIN_PHASE_ANGLE, MAX_PHASE_ANGLE);
+                    update_numeric_sensor(x, obis_str, id(phase_angle_il2_ul2),
+                                          "deg", MIN_PHASE_ANGLE,
+                                          MAX_PHASE_ANGLE);
                   }
                   break;
                 case HASH_PHASE_ANGLE_IL3_UL3:
                   if (ENABLE_PHASE_ANGLE_SENSORS) {
-                    update_numeric_sensor(x, obis_str, id(phase_angle_il3_ul3), "deg", MIN_PHASE_ANGLE, MAX_PHASE_ANGLE);
+                    update_numeric_sensor(x, obis_str, id(phase_angle_il3_ul3),
+                                          "deg", MIN_PHASE_ANGLE,
+                                          MAX_PHASE_ANGLE);
                   }
                   break;
                 case HASH_SERIAL_NUMBER:
                   if (ENABLE_DIAGNOSTIC_SENSORS) {
-                    update_text_sensor_filtered(x, obis_str, id(serial_number), id(serial_number_last_hash), id(serial_number_count));
+                    update_text_sensor_filtered(x, obis_str, id(serial_number),
+                                                id(serial_number_last_hash),
+                                                id(serial_number_count));
                   }
                   break;
                 case HASH_FIRMWARE_VERSION:
                   if (ENABLE_DIAGNOSTIC_SENSORS) {
-                    update_text_sensor_filtered(x, obis_str, id(firmware_version), id(firmware_version_last_hash), id(firmware_version_count));
+                    update_text_sensor_filtered(x, obis_str,
+                                                id(firmware_version),
+                                                id(firmware_version_last_hash),
+                                                id(firmware_version_count));
                   }
                   break;
                 case HASH_PARAMETER_CRC:
                   if (ENABLE_DIAGNOSTIC_SENSORS) {
-                    update_text_sensor_filtered(x, obis_str, id(parameter_crc), id(parameter_crc_last_hash), id(parameter_crc_count));
+                    update_text_sensor_filtered(x, obis_str, id(parameter_crc),
+                                                id(parameter_crc_last_hash),
+                                                id(parameter_crc_count));
                   }
                   break;
                 case HASH_STATUS_REGISTER:
                   if (ENABLE_DIAGNOSTIC_SENSORS) {
-                    update_text_sensor_filtered(x, obis_str, id(status_register), id(status_register_last_hash), id(status_register_count));
+                    update_text_sensor_filtered(x, obis_str,
+                                                id(status_register),
+                                                id(status_register_last_hash),
+                                                id(status_register_count));
                   }
                   break;
                 default:
-                  ESP_LOGD("meter", "Unknown OBIS code: %s (hash: 0x%08X)", trim_sv_for_log(current_obis), obis_hash);
+                  ESP_LOGD("meter",
+                           "Unknown OBIS code: %s (hash: 0x%08" PRIX32 ")",
+                           trim_sv_for_log(current_obis), obis_hash);
                   break;
               }
             }
-            // If current_obis is empty, error already logged in extract_obis_code and telegram_corrupted set
+            // An empty current_obis was already logged and flagged as corrupt
+            // by extract_obis_code.
+
             // Count corrupted telegrams
             if (telegram_corrupted) {
               id(corruption_count)++;
             }
+            #undef LOG_WARNING_IF_ENABLED
 
   # Meter information text sensors
   - platform: deduplicate_text
@@ -824,8 +985,8 @@ sensor:
     disabled_by_default: ${disabled_core_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Total Feed-in"
     id: total_feed_in
@@ -836,8 +997,8 @@ sensor:
     disabled_by_default: ${disabled_feed_in_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption 1 Day"
     id: consumption_1d
@@ -848,8 +1009,8 @@ sensor:
     disabled_by_default: ${disabled_rolling_window_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption 7 Days"
     id: consumption_7d
@@ -860,8 +1021,8 @@ sensor:
     disabled_by_default: ${disabled_rolling_window_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption 30 Days"
     id: consumption_30d
@@ -872,8 +1033,8 @@ sensor:
     disabled_by_default: ${disabled_rolling_window_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption 365 Days"
     id: consumption_365d
@@ -884,8 +1045,8 @@ sensor:
     disabled_by_default: ${disabled_rolling_window_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption T1"
     id: consumption_t1
@@ -896,8 +1057,8 @@ sensor:
     disabled_by_default: ${disabled_tariff_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption T2"
     id: consumption_t2
@@ -908,8 +1069,8 @@ sensor:
     disabled_by_default: ${disabled_tariff_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Consumption Since Reset"
     id: consumption_since_reset
@@ -920,8 +1081,8 @@ sensor:
     disabled_by_default: ${disabled_consumption_since_reset_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.001
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${energy_sensor_delta}
   - platform: template
     name: "Current Power"
     id: current_power
@@ -932,8 +1093,45 @@ sensor:
     disabled_by_default: ${disabled_core_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${power_sensor_delta}
+  # Per-phase active power sensors
+  - platform: template
+    name: "Power L1"
+    id: power_l1
+    unit_of_measurement: W
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+    disabled_by_default: ${disabled_phase_power_sensors}
+    filters:
+      - or:
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${power_sensor_delta}
+  - platform: template
+    name: "Power L2"
+    id: power_l2
+    unit_of_measurement: W
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+    disabled_by_default: ${disabled_phase_power_sensors}
+    filters:
+      - or:
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${power_sensor_delta}
+  - platform: template
+    name: "Power L3"
+    id: power_l3
+    unit_of_measurement: W
+    accuracy_decimals: 0
+    device_class: power
+    state_class: measurement
+    disabled_by_default: ${disabled_phase_power_sensors}
+    filters:
+      - or:
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${power_sensor_delta}
   # Voltage sensors
   - platform: template
     name: "Voltage L1"
@@ -945,8 +1143,8 @@ sensor:
     disabled_by_default: ${disabled_voltage_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.05
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${voltage_sensor_delta}
   - platform: template
     name: "Voltage L2"
     id: voltage_l2
@@ -957,8 +1155,8 @@ sensor:
     disabled_by_default: ${disabled_voltage_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.05
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${voltage_sensor_delta}
   - platform: template
     name: "Voltage L3"
     id: voltage_l3
@@ -969,8 +1167,8 @@ sensor:
     disabled_by_default: ${disabled_voltage_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.05
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${voltage_sensor_delta}
   # Current sensors
   - platform: template
     name: "Current L1"
@@ -982,8 +1180,8 @@ sensor:
     disabled_by_default: ${disabled_current_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.005
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${current_sensor_delta}
   - platform: template
     name: "Current L2"
     id: current_l2
@@ -994,8 +1192,8 @@ sensor:
     disabled_by_default: ${disabled_current_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.005
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${current_sensor_delta}
   - platform: template
     name: "Current L3"
     id: current_l3
@@ -1006,8 +1204,8 @@ sensor:
     disabled_by_default: ${disabled_current_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.005
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${current_sensor_delta}
   # Frequency sensor
   - platform: template
     name: "Frequency"
@@ -1019,8 +1217,8 @@ sensor:
     disabled_by_default: ${disabled_frequency_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.05
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${frequency_sensor_delta}
   # Phase angle sensors
   - platform: template
     name: "Phase Angle UL2:UL1"
@@ -1032,8 +1230,8 @@ sensor:
     disabled_by_default: ${disabled_phase_angle_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${phase_angle_sensor_delta}
   - platform: template
     name: "Phase Angle UL3:UL1"
     id: phase_angle_ul3_ul1
@@ -1044,8 +1242,8 @@ sensor:
     disabled_by_default: ${disabled_phase_angle_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${phase_angle_sensor_delta}
   - platform: template
     name: "Phase Angle IL1:UL1"
     id: phase_angle_il1_ul1
@@ -1056,8 +1254,8 @@ sensor:
     disabled_by_default: ${disabled_phase_angle_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${phase_angle_sensor_delta}
   - platform: template
     name: "Phase Angle IL2:UL2"
     id: phase_angle_il2_ul2
@@ -1068,8 +1266,8 @@ sensor:
     disabled_by_default: ${disabled_phase_angle_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${phase_angle_sensor_delta}
   - platform: template
     name: "Phase Angle IL3:UL3"
     id: phase_angle_il3_ul3
@@ -1080,8 +1278,8 @@ sensor:
     disabled_by_default: ${disabled_phase_angle_sensors}
     filters:
       - or:
-          - throttle: 5min
-          - delta: 0.5
+          - throttle: ${meter_sensor_throttle}
+          - delta: ${phase_angle_sensor_delta}
   # Communication quality sensor
   - platform: template
     name: "OBIS Valid Frame Rate"
@@ -1090,27 +1288,23 @@ sensor:
     accuracy_decimals: 1
     entity_category: diagnostic
     disabled_by_default: ${disabled_quality_sensors}
-    update_interval: 30s
-    lambda: |-      
-      // Atomic snapshots to prevent race conditions
+    update_interval: ${quality_sensor_update_interval}
+    lambda: |-
+      // Both counters are halved, keeping their ratio, once either reaches
+      // this, long before a uint32_t could overflow.
+      constexpr uint32_t COUNTER_HALVING_THRESHOLD = 4000000u;
+      constexpr float PERCENT = 100.0f;
+
+      // Every writer keeps corruption_count <= total_frames_received.
       uint32_t total_telegrams = id(total_frames_received);
       uint32_t corruption_events = id(corruption_count);
-      
-      // Prevent race condition by re-reading if corruption > total
-      if (corruption_events > total_telegrams) {
-        total_telegrams = id(total_frames_received);
-        corruption_events = id(corruption_count);
-        // If still inconsistent, use previous total
-        if (corruption_events > total_telegrams) {
-          corruption_events = total_telegrams;
-        }
-      }
 
       // Overflow protection
-      if (total_telegrams >= 4000000u || corruption_events >= 4000000u) {
+      if (total_telegrams >= COUNTER_HALVING_THRESHOLD ||
+          corruption_events >= COUNTER_HALVING_THRESHOLD) {
         uint32_t new_total = total_telegrams / 2;
         uint32_t new_corruption = corruption_events / 2;
-        
+
         id(total_frames_received) = new_total;
         id(corruption_count) = new_corruption;
         total_telegrams = new_total;
@@ -1118,33 +1312,35 @@ sensor:
       }
 
       if (total_telegrams == 0) return 0.0;
-      
+
       // Use uint32_t to prevent underflow, then cast to float
       uint32_t successfully_processed = total_telegrams - corruption_events;
-      
-      return (float(successfully_processed) / float(total_telegrams)) * 100.0;
+
+      return (float(successfully_processed) / float(total_telegrams)) *
+             PERCENT;
     filters:
       - or:
-          - throttle: 2min
-          - delta: 0.1
-  # UART line activity counter — only active while positioning mode is ON.
-  # Counts every line the UART delivers before the filter, including dropped ones.
-  # Compare with total_frames_received (post-filter) to diagnose signal issues:
-  #   grows, total_frames_received flat → filter dropping everything (bad signal)
-  #   both frozen → no UART data at all (probe disconnected / meter silent)
+          - throttle: ${quality_sensor_throttle}
+          - delta: ${frame_rate_sensor_delta}
+  # Reader activity, counted only while positioning mode is ON (see the
+  # uart_lines_seen global). Compare with total_frames_received:
+  #   grows, total_frames_received flat: the filter rejects every line
+  #   (garbled text)
+  #   both grow, valid frame rate falls: SML telegrams are being dropped
+  #   both frozen: nothing arrives (probe disconnected or meter silent)
   - platform: template
     name: "UART Lines Seen"
     id: uart_lines_seen_sensor
     accuracy_decimals: 0
     entity_category: diagnostic
     disabled_by_default: ${disabled_quality_sensors}
-    update_interval: 30s
+    update_interval: ${quality_sensor_update_interval}
     lambda: return (float)id(uart_lines_seen);
     filters:
       - or:
-          - throttle: 2min
-          - delta: 0.5
-  # Positioning mode raw sensors — no validation, no throttle, only active
+          - throttle: ${quality_sensor_throttle}
+          - delta: ${uart_lines_sensor_delta}
+  # Positioning mode raw sensors: no validation, no throttle, only active
   # when positioning_mode switch is on (cleared to unavailable on turn-off)
   - platform: template
     name: "Raw Current Power"
@@ -1204,6 +1400,9 @@ button:
           id(prev_consumption_30d) = -1.0;
           id(prev_consumption_365d) = -1.0;
           id(prev_current_power) = -1.0;
+          id(prev_power_l1) = -1.0;
+          id(prev_power_l2) = -1.0;
+          id(prev_power_l3) = -1.0;
           id(prev_consumption_t1) = -1.0;
           id(prev_consumption_t2) = -1.0;
           id(prev_consumption_since_reset) = -1.0;
@@ -1264,48 +1463,60 @@ switch:
 script:
   - id: memory_sweep_hack
     mode: single
-    then: 
+    then:
       - lambda: |-
-          // This is a hack to force the ESP8266 heap manager to reduce fragmentation
-          // by allocating and freeing memory in a loop.
+          // This is a hack to force the ESP8266 heap manager to reduce
+          // fragmentation by allocating and freeing memory in a loop.
           // Only run on ESP8266
           #ifdef ARDUINO_ARCH_ESP8266
+            constexpr size_t BLOCK_SAFETY_MARGIN = ${heap_sweep_block_margin};
+            constexpr size_t MIN_FREE_HEAP_TO_START =
+                ${heap_sweep_min_free_to_start};
+            constexpr size_t MIN_FREE_HEAP_DURING =
+                ${heap_sweep_min_free_during};
+            constexpr float MAX_FRAGMENTATION_PERCENT =
+                ${heap_sweep_max_fragmentation_percent};
+            constexpr size_t MAX_BLOCK_DIVISOR =
+                ${heap_sweep_max_block_divisor};
+            constexpr size_t MIN_SWEEP_BLOCK = ${heap_sweep_min_block};
+            constexpr float PERCENT = 100.0f;
+
             // Safety checks: Don't sweep if memory is already tight
             size_t free_heap = ESP.getFreeHeap();
-            size_t max_block = ESP.getMaxFreeBlockSize() - 32; // 32 bytes safety margin
-            
-            // Don't sweep if less than 8KB free (unsafe)
-            if (free_heap < 8192) {
+            size_t max_block = ESP.getMaxFreeBlockSize() - BLOCK_SAFETY_MARGIN;
+
+            if (free_heap < MIN_FREE_HEAP_TO_START) {
               return;
             }
-            
-            // Don't sweep if heap is heavily fragmented (>80%)
-            float fragmentation = ((float)(free_heap - max_block) / free_heap) * 100.0;
-            if (fragmentation > 80.0) {
+
+            float fragmentation =
+                ((float)(free_heap - max_block) / free_heap) * PERCENT;
+            if (fragmentation > MAX_FRAGMENTATION_PERCENT) {
               return;
             }
-            
+
             // Use allocations with more frequent yields
             // This reduces the risk of interfering with UART/MQTT operations
-            for (size_t s = 1; s <= 32; s <<= 1) {  // Go up to 32x divisions
-              size_t len = max_block / s;
-              if (len < 256) {
-                break; 
-              } // Don't allocate tiny blocks
-              
-              void* p = malloc(len);
-              if (p) {
+            for (size_t divisor = 1; divisor <= MAX_BLOCK_DIVISOR;
+                 divisor <<= 1) {
+              size_t len = max_block / divisor;
+              if (len < MIN_SWEEP_BLOCK) {
+                break;
+              }
+
+              void* block = malloc(len);
+              if (block) {
                 // Brief operation, then yield
-                free(p);
-                
+                free(block);
+
                 // Feed watchdog (prevent resets)
                 App.feed_wdt();
-                
+
                 // Allow background tasks to run (maintain WiFi, etc.)
                 esp_yield();
-                
-                // Check if we should abort (heap got too low during operation)
-                if (ESP.getFreeHeap() < 6144) {  // 6KB minimum during operation
+
+                // Abort if the heap got too low during the sweep
+                if (ESP.getFreeHeap() < MIN_FREE_HEAP_DURING) {
                   break;
                 }
               } else {
@@ -1313,17 +1524,22 @@ script:
                 break;
               }
             }
-            
+
             size_t new_free_heap = ESP.getFreeHeap();
             size_t new_max_block = ESP.getMaxFreeBlockSize();
-            float new_fragmentation = ((float)(new_free_heap - new_max_block) / new_free_heap) * 100.0;
-            
-            ESP_LOGI("memory_sweep", "Completed - heap: %u->%u, max_block: %u->%u, frag: %.1f%%->%.1f%%", 
-                     free_heap, new_free_heap, max_block, new_max_block, fragmentation, new_fragmentation);
-          #endif 
+            float new_fragmentation =
+                ((float)(new_free_heap - new_max_block) / new_free_heap) *
+                PERCENT;
+
+            ESP_LOGI("memory_sweep",
+                     "Completed - heap: %u->%u, max_block: %u->%u, "
+                     "frag: %.1f%%->%.1f%%",
+                     free_heap, new_free_heap, max_block, new_max_block,
+                     fragmentation, new_fragmentation);
+          #endif
 
 interval:
-  - interval: 5min
-    startup_delay: 2min
+  - interval: ${heap_sweep_interval}
+    startup_delay: ${heap_sweep_startup_delay}
     then:
-      - script.execute: memory_sweep_hack    
+      - script.execute: memory_sweep_hack

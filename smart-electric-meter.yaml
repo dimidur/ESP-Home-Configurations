@@ -19,83 +19,102 @@ substitutions:
   mqtt_lwt_offline_payload: "Offline"
   mqtt_keepalive: 60s
 
-  # UART Configuration
+  # UART Configuration. The Logarex LK13BE606739 pushes SML at 9600 8N1;
+  # at 8N1 a 7E1 text meter is read correctly too.
   uart_rx_pin: "D2"
   uart_baud_rate: "9600"
-  uart_parity: "EVEN"
-  uart_data_bits: "7"
+  uart_parity: "NONE"
+  uart_data_bits: "8"
   uart_stop_bits: "1"
-  uart_rx_buffer_size: "256"
+  # An SML telegram (660 bytes from the LK13BE606739) takes about 0.7 s to
+  # arrive; the buffer holds a whole one through loop stalls.
+  uart_rx_buffer_size: "1024"
 
   # Validation constants for meter readings
-  max_realistic_power: "17250.0" # 17.25kW (25A * 3 phases * 230V)
-  max_absolute_power: "34500.0" # 34.5kW (2x realistic power as absolute limit)
-  max_power_change: "3000.0" # 3kW max power change per reading
-  max_current_change: "13.0" # 13A max current change per reading (derived from 3kW/230V)
-  max_energy_total: "100000.0" # 100,000 kWh reasonable lifetime maximum
-  max_energy_change: "0.5" # 0.5 kWh max energy change per reading
-  max_rolling_energy_change: "2.0" # 2 kWh max energy change for rolling window sensors per reading
-  min_energy_value: "0.0" # Minimum energy value (kWh)
-  min_power_value: "0.0" # Minimum power value (W)
+  # 34.5 kW: twice the realistic 17.25 kW (25 A * 3 phases * 230 V)
+  max_absolute_power: "34500.0"
+  max_power_change: "3000.0"  # 3 kW max power change per reading
+  # 13 A max current change per reading (3 kW / 230 V)
+  max_current_change: "13.0"
+  max_energy_total: "100000.0"  # 100,000 kWh reasonable lifetime maximum
+  max_energy_change: "0.5"  # 0.5 kWh max energy change per reading
+  # 2 kWh max energy change per reading for rolling window sensors
+  max_rolling_energy_change: "2.0"
+  min_energy_value: "0.0"  # Minimum energy value (kWh)
+  min_power_value: "0.0"  # Minimum power value (W)
 
   # Rolling window maximum values - safe limits for consumption sensors
-  max_consumption_1d: "30.0" # 30kWh maximum for 1-day rolling window
-  max_consumption_7d: "210.0" # 210kWh maximum for 7-day rolling window
-  max_consumption_30d: "800.0" # 800kWh maximum for 30-day rolling window
-  max_consumption_365d: "10000.0" # 10,000kWh maximum for 365-day rolling window
+  max_consumption_1d: "30.0"  # 30 kWh maximum for 1-day rolling window
+  max_consumption_7d: "210.0"  # 210 kWh maximum for 7-day rolling window
+  max_consumption_30d: "800.0"  # 800 kWh maximum for 30-day rolling window
+  # 10,000 kWh maximum for 365-day rolling window
+  max_consumption_365d: "10000.0"
 
-  # OBIS codes for smart meter readings
-  obis_total_consumption: "1-0:1.8.0*255" # Total energy consumption (kWh)
-  obis_consumption_1d: "1-0:1.8.0*96" # Energy consumption last 1 day (kWh)
-  obis_consumption_7d: "1-0:1.8.0*97" # Energy consumption last 7 days (kWh)
-  obis_consumption_30d: "1-0:1.8.0*98" # Energy consumption last 30 days (kWh)
-  obis_consumption_365d: "1-0:1.8.0*99" # Energy consumption last 365 days (kWh)
-  obis_total_feed_in: "1-0:2.8.0*255" # Total energy feed-in (kWh)
-  obis_current_power: "1-0:16.7.0*255" # Current power consumption (W)
+  # OBIS codes for smart meter readings. Unconfirmed: the 1d/7d/30d/365d,
+  # since-reset, T1/T2 and status register values were absent from the
+  # LK13BE606739 telegram captured at its current settings; whether the
+  # meter can be set to send them is not yet established.
+  obis_total_consumption: "1-0:1.8.0*255"  # Total energy consumption (kWh)
+  obis_consumption_1d: "1-0:1.8.0*96"  # Energy consumption last 1 day (kWh)
+  obis_consumption_7d: "1-0:1.8.0*97"  # Energy consumption last 7 days (kWh)
+  obis_consumption_30d: "1-0:1.8.0*98"  # Energy consumption last 30 days
+  obis_consumption_365d: "1-0:1.8.0*99"  # Energy consumption last 365 days
+  obis_total_feed_in: "1-0:2.8.0*255"  # Total energy feed-in (kWh)
+  obis_current_power: "1-0:16.7.0*255"  # Current power consumption (W)
+  obis_power_l1: "1-0:36.7.0*255"  # Active power L1 (W)
+  obis_power_l2: "1-0:56.7.0*255"  # Active power L2 (W)
+  obis_power_l3: "1-0:76.7.0*255"  # Active power L3 (W)
 
   # Additional OBIS codes for comprehensive meter reading
-  obis_serial_number: "1-0:96.1.0*255" # Serial number/identification
-  obis_consumption_t1: "1-0:1.8.1*255" # Energy consumption T1 (kWh)
-  obis_consumption_t2: "1-0:1.8.2*255" # Energy consumption T2 (kWh)
-  obis_voltage_l1: "1-0:32.7.0*255" # Voltage L1 (V)
-  obis_voltage_l2: "1-0:52.7.0*255" # Voltage L2 (V)
-  obis_voltage_l3: "1-0:72.7.0*255" # Voltage L3 (V)
-  obis_current_l1: "1-0:31.7.0*255" # Current L1 (A)
-  obis_current_l2: "1-0:51.7.0*255" # Current L2 (A)
-  obis_current_l3: "1-0:71.7.0*255" # Current L3 (A)
-  obis_phase_angle_ul2_ul1: "1-0:81.7.1*255" # Phase angle UL2:UL1 (deg)
-  obis_phase_angle_ul3_ul1: "1-0:81.7.2*255" # Phase angle UL3:UL1 (deg)
-  obis_phase_angle_il1_ul1: "1-0:81.7.4*255" # Phase angle IL1:UL1 (deg)
-  obis_phase_angle_il2_ul2: "1-0:81.7.15*255" # Phase angle IL2:UL2 (deg)
-  obis_phase_angle_il3_ul3: "1-0:81.7.26*255" # Phase angle IL3:UL3 (deg)
-  obis_frequency: "1-0:14.7.0*255" # Network frequency (Hz)
-  obis_consumption_since_reset: "1-0:1.8.0*100" # Energy since last reset (kWh)
-  obis_firmware_version: "1-0:0.2.0*255" # Firmware version info
-  obis_parameter_crc: "1-0:96.90.2*255" # Parameter CRC checksum
-  obis_status_register: "1-0:97.97.0*255" # Status register
+  obis_serial_number: "1-0:96.1.0*255"  # Serial number/identification
+  obis_consumption_t1: "1-0:1.8.1*255"  # Energy consumption T1 (kWh)
+  obis_consumption_t2: "1-0:1.8.2*255"  # Energy consumption T2 (kWh)
+  obis_voltage_l1: "1-0:32.7.0*255"  # Voltage L1 (V)
+  obis_voltage_l2: "1-0:52.7.0*255"  # Voltage L2 (V)
+  obis_voltage_l3: "1-0:72.7.0*255"  # Voltage L3 (V)
+  obis_current_l1: "1-0:31.7.0*255"  # Current L1 (A)
+  obis_current_l2: "1-0:51.7.0*255"  # Current L2 (A)
+  obis_current_l3: "1-0:71.7.0*255"  # Current L3 (A)
+  obis_phase_angle_ul2_ul1: "1-0:81.7.1*255"  # Phase angle UL2:UL1 (deg)
+  obis_phase_angle_ul3_ul1: "1-0:81.7.2*255"  # Phase angle UL3:UL1 (deg)
+  obis_phase_angle_il1_ul1: "1-0:81.7.4*255"  # Phase angle IL1:UL1 (deg)
+  obis_phase_angle_il2_ul2: "1-0:81.7.15*255"  # Phase angle IL2:UL2 (deg)
+  obis_phase_angle_il3_ul3: "1-0:81.7.26*255"  # Phase angle IL3:UL3 (deg)
+  obis_frequency: "1-0:14.7.0*255"  # Network frequency (Hz)
+  obis_consumption_since_reset: "1-0:1.8.0*100"  # Energy since last reset
+  obis_firmware_version: "1-0:0.2.0*0"  # Firmware version info
+  obis_parameter_crc: "1-0:96.90.2*1"  # Parameter CRC checksum
+  obis_status_register: "1-0:97.97.0*255"  # Status register
+  # Manufacturer ID ("LOG"); the package has no sensor for it
+  # obis_manufacturer_id: "1-0:96.50.1*1"
 
   # Additional validation constants
-  max_voltage: "280.0" # 280V (max reasonable voltage)
-  min_voltage: "0.0" # 0V (min voltage)
-  max_current: "30.0" # 30A (max reasonable current)
-  min_current: "0.0" # 0A (min current)
-  max_frequency: "52.0" # 55Hz (max frequency)
-  min_frequency: "48.0" # 45Hz (min frequency)
-  max_phase_angle: "360.0" # 360° (max phase angle)
-  min_phase_angle: "-360.0" # -360° (min phase angle)
+  max_voltage: "280.0"  # 280 V (max reasonable voltage)
+  min_voltage: "0.0"  # 0 V (min voltage)
+  max_current: "30.0"  # 30 A (max reasonable current)
+  min_current: "0.0"  # 0 A (min current)
+  max_frequency: "52.0"  # 52 Hz (max frequency)
+  min_frequency: "48.0"  # 48 Hz (min frequency)
+  max_phase_angle: "360.0"  # 360° (max phase angle)
+  min_phase_angle: "-360.0"  # -360° (min phase angle)
 
-  # Sensor Group Control (set to "true" to disable processing and hide by default)
-  disabled_core_sensors: "false" # Core sensors (total consumption, current power)
-  disabled_feed_in_sensors: "true" # Feed-in sensors (total feed-in)
-  disabled_voltage_sensors: "false" # Voltage L1/L2/L3 sensors
-  disabled_current_sensors: "false" # Current L1/L2/L3 sensors
-  disabled_frequency_sensors: "false" # Frequency sensor
-  disabled_phase_angle_sensors: "false" # Phase angle sensors
-  disabled_tariff_sensors: "true" # T1/T2 consumption sensors
-  disabled_consumption_since_reset_sensors: "true" # Consumption since reset sensor
-  disabled_rolling_window_sensors: "false" # 1d/7d/30d/365d consumption sensors
-  disabled_diagnostic_sensors: "true" # Diagnostic sensors (serial, firmware, etc.)
-  disabled_quality_sensors: "false" # Communication quality sensors
+  # Sensor Group Control ("true" disables processing and hides by default)
+  # Core sensors (total consumption, current power)
+  disabled_core_sensors: "false"
+  disabled_feed_in_sensors: "true"  # Feed-in sensors (total feed-in)
+  disabled_phase_power_sensors: "false"  # Power L1/L2/L3 sensors
+  disabled_voltage_sensors: "false"  # Voltage L1/L2/L3 sensors
+  disabled_current_sensors: "false"  # Current L1/L2/L3 sensors
+  disabled_frequency_sensors: "false"  # Frequency sensor
+  disabled_phase_angle_sensors: "false"  # Phase angle sensors
+  disabled_tariff_sensors: "true"  # T1/T2 consumption sensors
+  # Consumption since reset sensor
+  disabled_consumption_since_reset_sensors: "true"
+  # 1d/7d/30d/365d consumption sensors
+  disabled_rolling_window_sensors: "false"
+  # Diagnostic sensors (serial, firmware, etc.)
+  disabled_diagnostic_sensors: "false"
+  disabled_quality_sensors: "false"  # Communication quality sensors
 
 esphome:
   name: ${name}
@@ -113,7 +132,6 @@ esp8266:
 preferences:
   flash_write_interval: 5min
 
-# Enable debug logging
 logger:
   level: INFO
 
@@ -134,14 +152,14 @@ packages:
 
 captive_portal:
 
-# debug:
+# Why the device last restarted (watchdog, exception, software restart)
+debug:
 
-# text_sensor:
-#   - platform: debug
-#     reset_reason:
-#       id: reset_reason
-#       name: "Reset Reason"
-#       entity_category: diagnostic
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+      entity_category: diagnostic
 
 # Additional sensors for this device
 sensor:
@@ -151,116 +169,3 @@ sensor:
     update_interval: 60s
     entity_category: diagnostic
     disabled_by_default: true
-
-  # Enable to debug memory issues
-  # - platform: debug
-  #   free:
-  #     name: "Heap Free"
-  #     id: heap_free
-  #     entity_category: diagnostic
-  #     disabled_by_default: true
-  #   fragmentation:
-  #     name: "Heap Fragmentation"
-  #     id: heap_fragmentation
-  #     entity_category: diagnostic
-  #     disabled_by_default: true
-  #   block:
-  #     name: "Heap Max Block"
-  #     id: heap_max_block
-  #     entity_category: diagnostic
-  #     disabled_by_default: true
-  #   loop_time:
-  #     name: "Loop Time"
-  #     id: loop_time
-  #     entity_category: diagnostic
-  #     disabled_by_default: true
-
-  # Heap health score combining fragmentation and free memory
-  # - platform: template
-  #   name: "Heap Health Score"
-  #   id: heap_health_score
-  #   unit_of_measurement: "%"
-  #   accuracy_decimals: 1
-  #   entity_category: diagnostic
-  #   disabled_by_default: true
-  #   update_interval: 60s
-  #   lambda: |-
-  #     size_t free_heap = ESP.getFreeHeap();
-  #     size_t max_block = ESP.getMaxFreeBlockSize();
-
-  #     if (isnan(free_heap) || free_heap <= 0) {
-  #       return 0;
-  #     }
-
-  #     float fragmentation = ((float)(free_heap - max_block) / free_heap) * 100.0;
-
-  #     if (isnan(fragmentation)) {
-  #       return 0;
-  #     }
-
-  #     // Health score: 0-100%, where 100% is perfect health
-  #     // Penalize high fragmentation and low free memory
-  #     float frag_penalty = fragmentation;  // 0-100%
-  #     float memory_penalty = free_heap < 16384 ? (16384 - free_heap) / 16384 * 50 : 0;  // 0-50%
-
-  #     float health_score = 100 - frag_penalty - memory_penalty;
-  #     return std::max(0.0f, health_score);
-  #   filters:
-  #     - or:
-  #         - throttle: 5min
-  #         - delta: 5.0
-  # psram:
-  #   name: "Free PSRAM"
-  #   id: free_psram
-  #   entity_category: diagnostic
-  #   disabled_by_default: true
-  # cpu_frequency:
-  #   name: "CPU Frequency"
-  #   id: cpu_frequency
-  #   entity_category: diagnostic
-  #   disabled_by_default: true
-
-# -----------------------------------------------------------------------------
-# Handshake logic: keep the meter in printable IEC-62056-21 ASCII mode
-# -----------------------------------------------------------------------------
-
-# Never tested this, not sure this actually works, but added it here for reference for counters that
-# require handshake before sending any data.
-
-# script:
-#   - id: meter_handshake
-#     mode: queued
-#     then:
-#       # Give the UART some time after boot / Wi-Fi reconnects
-#       - delay: 3s
-#       # 1) "/?!\r\n" – enquiry according to IEC-62056-21
-#       - uart.write: "/?!\r\n"
-#       # 2) Wait for the meter to answer with the identification string
-#       - delay: 300ms
-#       # 3) ACK + mode/baud selector (0 6 0 => mode C, 9600 Bd, normal wait-time)
-#       - lambda: |-
-#           constexpr uint8_t ack[] = {0x06, '0', '6', '0', '\r', '\n'};
-#           id(uart_bus).write_array(ack, sizeof(ack));
-
-# # Execute once after every reboot and repeat regularly (meter falls back to
-# # idle mode after a few minutes without traffic).
-
-# on_boot:
-#   priority: -10
-#   then:
-#     - script.execute: meter_handshake
-
-# interval:
-#   - interval: 15min
-#     then:
-#       - script.execute: meter_handshake
-
-# Optionally, add a status LED (uncomment and set pin if desired)
-# output:
-#   - platform: gpio
-#     pin: D4
-#     id: status_led
-# status_led:
-#   pin:
-#     number: D4
-#     inverted: true

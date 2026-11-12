@@ -15,6 +15,7 @@ them **one at a time**, top to bottom. Finished plans move to
 | 06 | [Info-screen battery reporting](./06-info-screen-battery-reporting-improvements.md) | ⬜ documented 2026-07-29: seed-republish (fix #1) already implemented; spike-seed / charging-hysteresis / monotonic-% deferred | `lilygos3-info-screen.yaml` |
 | 07 | [yamllint cleanup of the large configs](./07-yamllint-cleanup-large-configs.md) | ⬜ queued 2026-10-02, no code yet | `lilygos3-info-screen.yaml`, `air-quality-sensor-1.yaml` |
 | 08 | [Main water inlet valve box](./08-motorized-ball-valve-box.md) | ⬜ planned 2026-10-04: package drafted, no hardware yet. New hardware, not blocked by 05 | `packages/device-configs/motorized-ball-valve-cr02.yaml`, new device config |
+| 09 | [Split the electricity-meter package](./09-electricity-meter-package-split.md) | ⬜ documented 2026-11-11, after the SML support ships | `packages/device-configs/electricity-meter.yaml`, `components/electricity_meter_reader/` |
 
 **Completed:**
 
