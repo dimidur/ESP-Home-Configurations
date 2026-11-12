@@ -11,6 +11,7 @@ on Home Assistant integration.
 - [Custom Components](#custom-components)
   - [UART Line Reader](#uart-line-reader-uart_line_reader)
   - [Electricity Meter Reader](#electricity-meter-reader-electricity_meter_reader)
+  - [UART Edge-Timed Receive](#uart-edge-timed-receive-uart_edge_rx)
   - [Deduplicate Text Sensor](#deduplicate-text-sensor-deduplicate_text)
   - [QRCode2 UART Scanner](#qrcode2-uart-scanner-qrcode2_uart)
   - [Diesel Heater RF](#diesel-heater-rf-diesel_heater_rf)
@@ -191,6 +192,33 @@ esphome:
         - logger.log:
             format: "Telegram dropped, %u lines lost"
             args: ["(unsigned) lines_lost"]
+  ```
+
+### UART Edge-Timed Receive (`uart_edge_rx`)
+
+- **Location:** `components/uart_edge_rx/`
+- **Description:** Receive fix for ESP8266 `uart:` buses that get ESPHome's
+  software UART (RX on any pin but GPIO3, GPIO13 or GPIO8). The software
+  UART reads each byte inside an interrupt with interrupts masked; under
+  sustained traffic that starves Wi-Fi and ends in hardware watchdog
+  resets. This component decodes the bytes from edge times instead and
+  feeds them into the bus's own buffer, so every device on the bus reads
+  them as before.
+- **Features:**
+  - Applies only where needed: no code on the ESP32, and at runtime it
+    steps aside when the bus got a hardware UART
+  - Takes the frame format from the bus (5 to 8 data bits, parity ignored
+    as ESPHome does, 1 or 2 stop bits); receive only; 300 to 38400 baud
+- **Used by:** `packages/device-configs/electricity-meter.yaml`
+- **Design:** see `docs/esp8266-software-uart-rx.md` for the cause, the
+  coupling to ESPHome internals, the limits and the alternative considered
+- **Tests:** host tests in `tests/uart_edge_rx/`; run
+  `tests/uart_edge_rx/run.sh` from the repository root
+- **Usage:**
+
+  ```yaml
+  uart_edge_rx:
+    - uart_id: uart_bus
   ```
 
 ### Deduplicate Text Sensor (`deduplicate_text`)
@@ -412,8 +440,9 @@ consistency and reduce code duplication across different ESPHome devices.
     UART settings)
 - **Board:** ESP8266 (tested), ESP32 (compiles but untested on hardware)
 - **Requirements:**
-  - Custom `electricity_meter_reader` and `deduplicate_text` components
-    (see [Custom Components](#custom-components))
+  - Custom `electricity_meter_reader`, `uart_edge_rx` and
+    `deduplicate_text` components (see
+    [Custom Components](#custom-components))
   - IR head or serial connection to smart meter
   - **ESP32**: C++17 or later support required for this package (see
     [C++20 Support](#c20-support-for-esp32))
@@ -665,8 +694,9 @@ variants are covered by dedicated device config packages.
   - WiFi signal strength monitoring via shared package
 - **Board:** ESP8266 D1 Mini (tested), ESP32 (compiles but untested on hardware)
 - **Hardware:** Requires IR head for optical interface communication
-- **Dependencies:** Uses the custom `electricity_meter_reader` and
-  `deduplicate_text` components (see [Custom Components](#custom-components))
+- **Dependencies:** Uses the custom `electricity_meter_reader`,
+  `uart_edge_rx` and `deduplicate_text` components (see
+  [Custom Components](#custom-components))
 - **Common Config:** Uses electricity meter device config from
   `packages/device-configs/electricity-meter.yaml`, MQTT configuration from
   `packages/mqtt.yaml` and `packages/mqtt-diagnostic-sensors.yaml`, and WiFi

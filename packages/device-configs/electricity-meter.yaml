@@ -5,9 +5,9 @@
 # data bits and no parity both arrive as the same OBIS text lines
 # (electricity_meter_reader component).
 #
-# IMPORTANT: This package requires the custom electricity_meter_reader and
-# deduplicate_text components. You must include this in your main
-# configuration:
+# IMPORTANT: This package requires the custom electricity_meter_reader,
+# uart_edge_rx and deduplicate_text components. You must include this in
+# your main configuration:
 # external_components:
 #   - source:
 #       type: local
@@ -56,6 +56,12 @@ uart:
   data_bits: ${uart_data_bits}
   stop_bits: ${uart_stop_bits}
   rx_buffer_size: ${uart_rx_buffer_size}
+
+# On an ESP8266 RX pin without a hardware UART, receive by edge timing
+# instead of ESPHome's interrupt-blocking software UART; does nothing on a
+# hardware UART or on the ESP32.
+uart_edge_rx:
+  - uart_id: uart_bus
 
 # Global variables for validation state tracking
 globals:

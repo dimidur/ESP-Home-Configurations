@@ -10,7 +10,7 @@
 
 #include "../../components/electricity_meter_reader/obis_line.h"
 #include "../../components/electricity_meter_reader/sml_decoder.h"
-#include "harness.h"
+#include "../harness/harness.h"
 #include "sml_builder.h"
 
 namespace {

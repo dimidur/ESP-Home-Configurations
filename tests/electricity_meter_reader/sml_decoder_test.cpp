@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "../../components/electricity_meter_reader/sml_decoder.h"
-#include "harness.h"
+#include "../harness/harness.h"
 #include "sml_builder.h"
 
 namespace {

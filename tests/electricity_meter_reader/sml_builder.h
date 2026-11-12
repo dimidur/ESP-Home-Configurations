@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "harness.h"
+#include "../harness/harness.h"
 #include "logarex_telegram.h"
 
 namespace meter_test {

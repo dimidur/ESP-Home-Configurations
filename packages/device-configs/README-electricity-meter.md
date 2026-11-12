@@ -28,8 +28,9 @@ meters via optical interface (IR head) or serial connection.
 ## Important Notes
 
 ⚠️ **Custom Components Required**: This package uses the custom
-`electricity_meter_reader` and `deduplicate_text` components. You must
-include the external components in your main configuration:
+`electricity_meter_reader`, `uart_edge_rx` and `deduplicate_text`
+components. You must include the external components in your main
+configuration:
 
 ```yaml
 external_components:

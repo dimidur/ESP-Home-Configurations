@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "../../components/electricity_meter_reader/meter_stream.h"
-#include "harness.h"
+#include "../harness/harness.h"
 #include "sml_builder.h"
 
 namespace {

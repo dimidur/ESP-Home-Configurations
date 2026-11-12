@@ -25,9 +25,12 @@ when a sanitizer reports an error or when the run exceeds its time limit.
 | `sml_decoder_test.cpp` | Framing, CRC and decoding into entries |
 | `obis_line_test.cpp` | Rendering an entry as an OBIS text line |
 | `meter_stream_test.cpp` | Text lines, telegrams, resync and drops |
+| `edge_rx_end_to_end_test.cpp` | Line edges through `uart_edge_rx`'s decoder into the reader |
 | `sml_builder.h` | SML telegrams built from the specification |
 | `logarex_telegram.h` | A captured telegram and its expected lines |
-| `harness.h`, `harness_main.cpp` | `TEST`, `EXPECT`, `REQUIRE` and the runner |
+
+The test harness (`TEST`, `EXPECT`, `REQUIRE` and the runner) is shared
+with the other suites in `tests/harness/`.
 
 This repository is public: commit a captured telegram only after replacing
 the meter identification and recomputing its CRCs, as `logarex_telegram.h`

@@ -17,7 +17,9 @@ trap 'rm -rf "${build_dir}"' EXIT
   "${component}/sml_decoder.cpp" \
   "${component}/obis_line.cpp" \
   "${component}/meter_stream.cpp" \
-  "${here}/harness_main.cpp" \
+  "${here}/../../components/uart_edge_rx/edge_uart_decoder.cpp" \
+  "${here}/../harness/harness_main.cpp" \
+  "${here}/edge_rx_end_to_end_test.cpp" \
   "${here}/sml_decoder_test.cpp" \
   "${here}/obis_line_test.cpp" \
   "${here}/meter_stream_test.cpp" \
